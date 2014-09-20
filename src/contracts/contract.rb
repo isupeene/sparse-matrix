@@ -53,17 +53,14 @@ module Contract
 
 	def matching_instance_methods(type, primary_suffix, secondary_suffix)
 		contract_suffix = primary_suffix + secondary_suffix
-		puts "checking #{contract_suffix}"
 		type.instance_methods.select {
 			|m| m.to_s.end_with?(contract_suffix)
 		}.each \
 		do |contract|
-			puts "found #{contract}"
 			method = type.instance_method(convert_method_name(
 				contract.to_s[0...-contract_suffix.length] +
 				secondary_suffix
 			))
-			puts "found #{method.name}"
 			yield type.instance_method(contract), method
 		end
 	end
