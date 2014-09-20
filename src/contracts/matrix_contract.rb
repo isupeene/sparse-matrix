@@ -8,6 +8,7 @@ module MatrixTest
         ##############
         
         def diagonal_precondition
+		assert square?
         end
 
         def diagonal_postcondition(result)
