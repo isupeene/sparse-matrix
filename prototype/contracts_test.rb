@@ -131,6 +131,7 @@ module Contract
 end
 
 module Invariants
+	include Test::Unit::Assertions
 	def const(*args)
 		temp = clone
 		yield
@@ -139,7 +140,6 @@ module Invariants
 end
 
 module SquarerContract
-	include Test::Unit::Assertions
 	include Invariants
 	extend Contract
 
