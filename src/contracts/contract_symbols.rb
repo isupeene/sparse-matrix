@@ -1,15 +1,7 @@
 module ContractSymbols
-	def precondition_suffix
-		"_precondition"
-	end
-
-	def postcondition_suffix
-		"_postcondition"
-	end
-
-	def invariant_suffix
-		"_invariant"
-	end
+	PRECONDITION_SUFFIX = "_precondition"
+	POSTCONDITION_SUFFIX = "_postcondition"
+	INVARIANT_SUFFIX = "_invariant"
 
 	def split_method_name(method_name)
 		if ['?', '!', '='] === method_name[-1]
@@ -21,16 +13,16 @@ module ContractSymbols
 
 	def precondition_name(method_name)
 		root_name, suffix = split_method_name(method_name)
-		return root_name + precondition_suffix + suffix
+		return root_name + PRECONDITION_SUFFIX + suffix
 	end
 
 	def postcondition_name(method_name)
 		root_name, suffix = split_method_name(method_name)
-		return root_name + postcondition_suffix + suffix
+		return root_name + POSTCONDITION_SUFFIX + suffix
 	end
 
 	def invariant_name(method_name)
 		root_name, suffix = split_method_name(method_name)
-		return root_name + invariant_suffix + suffix
+		return root_name + INVARIANT_SUFFIX + suffix
 	end
 end

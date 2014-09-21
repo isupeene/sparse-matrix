@@ -12,7 +12,7 @@ module Contract
 	end
 
 	def require_preconditions(type)
-		override_matching_instance_methods(type, precondition_suffix) \
+		override_matching_instance_methods(type, PRECONDITION_SUFFIX) \
 		do |instance, contract, method, *args|
 			instance.invariant
 			contract.bind(instance).call(*args)
@@ -21,7 +21,7 @@ module Contract
 	end
 
 	def require_postconditions(type)
-		override_matching_instance_methods(type, postcondition_suffix) \
+		override_matching_instance_methods(type, POSTCONDITION_SUFFIX) \
 		do |instance, contract, method, *args|
 			result = method.bind(instance).call(*args)
 			contract.bind(instance).call(*args, result)
@@ -31,7 +31,7 @@ module Contract
 	end
 
 	def require_method_invariants(type)
-		override_matching_instance_methods(type, invariant_suffix) \
+		override_matching_instance_methods(type, INVARIANT_SUFFIX) \
 		do |instance, contract, method, *args|
 			result = nil
 			contract.bind(instance).call(*args) {
