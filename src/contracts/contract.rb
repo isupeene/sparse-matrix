@@ -31,7 +31,7 @@ module Contract
 	end
 
 	def require_method_invariants(type)
-		override_matching_instance_methods(type, precondition_suffix) \
+		override_matching_instance_methods(type, invariant_suffix) \
 		do |instance, contract, method, *args|
 			result = nil
 			contract.bind(instance).call(*args) {
