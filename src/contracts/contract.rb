@@ -155,7 +155,7 @@ module Contract
 
 	def add_postcondition_contract(method_name, &block)
 		add_pre_or_postcondition_contract(
-			method_name, postcondition_name(method_name), block
+			method_name, postcondition_name(method_name), &block
 		)
 	end
 
