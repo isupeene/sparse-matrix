@@ -1,5 +1,5 @@
 require 'test/unit'
-require './contracts/contract_symbols'
+require_relative 'contract_symbols'
 
 module Contract
 	include Test::Unit::Assertions
@@ -9,42 +9,90 @@ module Contract
 	# and will be called when that module is included in the target class.
 	# Ensures that all contracts are checked in the target class.
 	def included(type)
+		add_contract_evaluation_methods(type)
+
+		# NOTE: require_method_invariants must be called first,
+		# since the method invariant wraps the whole function, so when
+		# we enclose the method invariant in a call to evaluate_contract,
+		# we prevent any other contracts from running within it.
+		# Therefore, the method invariant must be the innermost contract.
 		require_method_invariants(type)
 		require_preconditions(type)
 		require_postconditions(type)
+		require_class_invariant(type)
+	end
+
+	def add_contract_evaluation_methods(type)
+		type.send(:define_method, :evaluating_contract?) do
+			if defined?(@evaluating_contract)
+				@evaluating_contract
+			else
+				false
+			end
+		end
+
+		type.send(:define_method, :evaluate_contract) do |&block|
+			return if evaluating_contract?
+
+			@evaluating_contract = true
+			block.call
+			@evaluating_contract = false
+		end
+	end
+
+	def require_class_invariant(type)
+		type.instance_methods.each do |symbol|
+			method = type.instance_method(symbol)
+			
+			type.send(:define_method, symbol) do |*args, &block|
+				evaluate_contract{ invariant }
+				method.bind(self).call(*args, &block)
+				evaluate_contract{ invariant }
+			end
+		end
 	end
 
 	def require_preconditions(type)
 		override_matching_instance_methods(type, PRECONDITION_SUFFIX) \
-		do |instance, contract, method, *args|
-			instance.invariant
-			contract.bind(instance).call(*args)
-			method.bind(instance).call(*args)
+		do |instance, contract, method, *args, &block|
+			instance.evaluate_contract {
+				contract.bind(instance).call(*args, &block)
+			}
+			method.bind(instance).call(*args, &block)
 		end
 	end
 
 	def require_postconditions(type)
 		override_matching_instance_methods(type, POSTCONDITION_SUFFIX) \
-		do |instance, contract, method, *args|
-			result = method.bind(instance).call(*args)
-			contract.bind(instance).call(*args << result)
-			instance.invariant
+		do |instance, contract, method, *args, &block|
+			result = method.bind(instance).call(*args, &block)
+			instance.evaluate_contract {
+				contract.bind(instance).call(*args << result, &block)
+			}
 			result
 		end
 	end
 
 	def require_method_invariants(type)
 		override_matching_instance_methods(type, INVARIANT_SUFFIX) \
-		do |instance, contract, method, *args|
+		do |instance, contract, method, *args, &block|
 			result = nil
-			contract.bind(instance).call(*args) {
-				result = method.bind(instance).call(*args)
+			instance.evaluate_contract {
+				# NOTE: The method invariant cannot be passed the same
+				# block that is passed to the function, since it
+				# needs to be passed this block which evaluates
+				# the function and assigns it to result.
+				# as a result, method invariants may not see the
+				# block arguments to the function under contract.
+				contract.bind(instance).call(*args) {
+					result = method.bind(instance).call(*args, &block)
+				}
 			}
 			result
 		end
 	end
 
-	def override_matching_instance_methods(type, primary_suffix)
+	def override_matching_instance_methods(type, primary_suffix, &override)
 		["", "?", "!", "="].each do |secondary_suffix|
 			matching_instance_methods(
 				type,
@@ -52,8 +100,10 @@ module Contract
 			) \
 			do |contract, method|
 				type.send(:define_method, method.name) \
-				do |*args|
-					yield self, contract, method, *args
+				do |*args, &block|
+					override.call(
+						self, contract, method, *args, &block
+					)
 				end
 			end
 		end

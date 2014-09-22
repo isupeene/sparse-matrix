@@ -1,5 +1,5 @@
 require 'test/unit'
-require './contracts/contract'
+require_relative 'contract'
 
 module MatrixContract
 	extend Contract
