@@ -48,8 +48,7 @@ module Contract
 		["", "?", "!", "="].each do |secondary_suffix|
 			matching_instance_methods(
 				type,
-				primary_suffix,
-				secondary_suffix
+				primary_suffix + secondary_suffix
 			) \
 			do |contract, method|
 				type.send(:define_method, method.name) \
@@ -60,8 +59,7 @@ module Contract
 		end
 	end
 
-	def matching_instance_methods(type, primary_suffix, secondary_suffix)
-		contract_suffix = primary_suffix + secondary_suffix
+	def matching_instance_methods(type, contract_suffix)
 		type.instance_methods.select {
 			|m| m.to_s.end_with?(contract_suffix)
 		}.each \
