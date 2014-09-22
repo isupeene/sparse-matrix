@@ -27,7 +27,7 @@ module Contract
 		override_matching_instance_methods(type, POSTCONDITION_SUFFIX) \
 		do |instance, contract, method, *args|
 			result = method.bind(instance).call(*args)
-			contract.bind(instance).call(*args.push(result))
+			contract.bind(instance).call(*args << result)
 			instance.invariant
 			result
 		end
