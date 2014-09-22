@@ -44,17 +44,17 @@ module ContractSymbols
 		if METHOD_ROOT_TO_CONTRACT_ROOT.has_key?(method_name)
 			# Avoid transforming operators like '=='
 			return method_name, ""
-		elsif ['?', '!', '='] === method_name[-1]
-			return method_name[0...-1], method_name[-1]
+		elsif ['?', '!', '='].include?(method_name[-1..-1])
+			return method_name[0...-1], method_name[-1..-1]
 		else
 			return method_name, ""
 		end
 	end
 
 	def split_contract_name(contract_name)
-		if ['?', '!', '='] === method_name[-1]
+		if ['?', '!', '='].include?(contract_name[-1..-1])
+			final_suffix = contract_name[-1..-1]
 			contract_name = contract_name[0...-1]
-			final_suffix = contract_name[-1]
 		else
 			final_suffix = ""
 		end

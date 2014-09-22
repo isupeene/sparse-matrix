@@ -1,5 +1,5 @@
 require 'test/unit'
-require './contract_symbols'
+require './contracts/contract_symbols'
 
 module Contract
 	include Test::Unit::Assertions
@@ -27,7 +27,7 @@ module Contract
 		override_matching_instance_methods(type, POSTCONDITION_SUFFIX) \
 		do |instance, contract, method, *args|
 			result = method.bind(instance).call(*args)
-			contract.bind(instance).call(*args, result)
+			contract.bind(instance).call(*args.push(result))
 			instance.invariant
 			result
 		end
