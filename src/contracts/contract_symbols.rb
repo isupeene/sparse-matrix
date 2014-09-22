@@ -41,7 +41,10 @@ module ContractSymbols
 	METHOD_ROOT_TO_CONTRACT_ROOT.default_proc = proc { |h, k| k }
 
 	def split_method_name(method_name)
-		if ['?', '!', '='] === method_name[-1]
+		if METHOD_ROOT_TO_CONTRACT_ROOT.has_key?(method_name)
+			# Avoid transforming operators like '=='
+			return method_name, ""
+		elsif ['?', '!', '='] === method_name[-1]
 			return method_name[0...-1], method_name[-1]
 		else
 			return method_name, ""
