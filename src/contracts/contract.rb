@@ -11,11 +11,6 @@ module Contract
 	def included(type)
 		add_contract_evaluation_methods(type)
 
-		# NOTE: require_method_invariants must be called first,
-		# since the method invariant wraps the whole function, so when
-		# we enclose the method invariant in a call to evaluate_contract,
-		# we prevent any other contracts from running within it.
-		# Therefore, the method invariant must be the innermost contract.
 		require_method_invariants(type)
 		require_preconditions(type)
 		require_postconditions(type)
@@ -31,12 +26,15 @@ module Contract
 			end
 		end
 
-		type.send(:define_method, :evaluate_contract) do |&block|
-			return if evaluating_contract?
+		type.send(:define_method, :evaluating_contract=) do |value|
+			@evaluating_contract = value
+		end
 
-			@evaluating_contract = true
-			block.call
-			@evaluating_contract = false
+		type.send(:define_method, :evaluate_contract) do |&block|
+			unless evaluating_contract?
+				@evaluating_contract = true
+				block.call
+				@evaluating_contract = false
 		end
 	end
 
@@ -76,19 +74,25 @@ module Contract
 	def require_method_invariants(type)
 		override_matching_instance_methods(type, INVARIANT_SUFFIX) \
 		do |instance, contract, method, *args, &block|
-			result = nil
-			instance.evaluate_contract {
+			if instance.evaluating_contract?
+				method.bind(instance).call(*args, &block)
+			else
+				result = nil
+				instance.evaluating_contract = true
 				# NOTE: The method invariant cannot be passed the same
 				# block that is passed to the function, since it
 				# needs to be passed this block which evaluates
-				# the function and assigns it to result.
-				# as a result, method invariants may not see the
+				# the function an assigns it to result.
+				# As a result, method invariants may not see the
 				# block arguments to the function under contract.
-				contract.bind(instance).call(*args) {
+				contract.bind(instance).call(*args << block) {
+					instance.evaluating_contract = false
 					result = method.bind(instance).call(*args, &block)
+					instance.evaluating_contract = true
 				}
-			}
-			result
+				instance.evaluating_contract = false
+				result
+			end
 		end
 	end
 
