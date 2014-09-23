@@ -85,7 +85,7 @@ module Contract
 				# the function an assigns it to result.
 				# As a result, method invariants may not see the
 				# block arguments to the function under contract.
-				contract.bind(instance).call(*args << block) {
+				contract.bind(instance).call(*args) {
 					instance.evaluating_contract = false
 					result = method.bind(instance).call(*args, &block)
 					instance.evaluating_contract = true
