@@ -9,22 +9,22 @@ module Contract
 	# and will be called when that module is included in the target class.
 	# Ensures that all contracts are checked in the target class.
 	def included(type)
-		add_contract_evaluation_methods(type)
-
 		require_method_invariants(type)
 		require_preconditions(type)
 		require_postconditions(type)
 		require_class_invariant(type)
+
+		add_contract_evaluation_methods(type)
 	end
 
 	def add_contract_evaluation_methods(type)
 		type.send(:attr_accessor, :evaluating_contract)
 
 		type.send(:define_method, :evaluate_contract) do |&block|
-			unless evaluating_contract
-				evaluating_contract = true
+			unless self.evaluating_contract
+				self.evaluating_contract = true
 				block.call
-				evaluating_contract = false
+				self.evaluating_contract = false
 			end
 		end
 	end
@@ -35,8 +35,9 @@ module Contract
 			
 			type.send(:define_method, symbol) do |*args, &block|
 				evaluate_contract{ invariant }
-				method.bind(self).call(*args, &block)
+				result = method.bind(self).call(*args, &block)
 				evaluate_contract{ invariant }
+				result
 			end
 		end
 	end
