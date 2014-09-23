@@ -18,23 +18,14 @@ module Contract
 	end
 
 	def add_contract_evaluation_methods(type)
-		type.send(:define_method, :evaluating_contract?) do
-			if defined?(@evaluating_contract)
-				@evaluating_contract
-			else
-				false
-			end
-		end
-
-		type.send(:define_method, :evaluating_contract=) do |value|
-			@evaluating_contract = value
-		end
+		type.send(:attr_accessor, :evaluating_contract)
 
 		type.send(:define_method, :evaluate_contract) do |&block|
-			unless evaluating_contract?
-				@evaluating_contract = true
+			unless evaluating_contract
+				evaluating_contract = true
 				block.call
-				@evaluating_contract = false
+				evaluating_contract = false
+			end
 		end
 	end
 
@@ -74,7 +65,7 @@ module Contract
 	def require_method_invariants(type)
 		override_matching_instance_methods(type, INVARIANT_SUFFIX) \
 		do |instance, contract, method, *args, &block|
-			if instance.evaluating_contract?
+			if instance.evaluating_contract
 				method.bind(instance).call(*args, &block)
 			else
 				result = nil
