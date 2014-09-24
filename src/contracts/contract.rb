@@ -18,13 +18,15 @@ module Contract
 	end
 
 	def add_contract_evaluation_methods(type)
-		type.send(:attr_accessor, :evaluating_contract)
+		class << type
+			attr_accessor :evaluating_contract
 
-		type.send(:define_method, :evaluate_contract) do |&block|
-			unless self.evaluating_contract
-				self.evaluating_contract = true
-				block.call
-				self.evaluating_contract = false
+			def evaluate_contract
+				unless self.evaluating_contract
+					self.evaluating_contract = true
+					yield
+					self.evaluating_contract = false
+				end
 			end
 		end
 	end
@@ -34,9 +36,9 @@ module Contract
 			method = type.instance_method(symbol)
 			
 			type.send(:define_method, symbol) do |*args, &block|
-				evaluate_contract{ invariant }
+				type.evaluate_contract{ invariant }
 				result = method.bind(self).call(*args, &block)
-				evaluate_contract{ invariant }
+				type.evaluate_contract{ invariant }
 				result
 			end
 		end
@@ -45,7 +47,7 @@ module Contract
 	def require_preconditions(type)
 		override_matching_instance_methods(type, PRECONDITION_SUFFIX) \
 		do |instance, contract, method, *args, &block|
-			instance.evaluate_contract {
+			type.evaluate_contract {
 				contract.bind(instance).call(*args, &block)
 			}
 			method.bind(instance).call(*args, &block)
@@ -56,7 +58,7 @@ module Contract
 		override_matching_instance_methods(type, POSTCONDITION_SUFFIX) \
 		do |instance, contract, method, *args, &block|
 			result = method.bind(instance).call(*args, &block)
-			instance.evaluate_contract {
+			type.evaluate_contract {
 				contract.bind(instance).call(*args << result, &block)
 			}
 			result
@@ -66,11 +68,11 @@ module Contract
 	def require_method_invariants(type)
 		override_matching_instance_methods(type, INVARIANT_SUFFIX) \
 		do |instance, contract, method, *args, &block|
-			if instance.evaluating_contract
+			if type.evaluating_contract
 				method.bind(instance).call(*args, &block)
 			else
 				result = nil
-				instance.evaluating_contract = true
+				type.evaluating_contract = true
 				# NOTE: The method invariant cannot be passed the same
 				# block that is passed to the function, since it
 				# needs to be passed this block which evaluates
@@ -78,11 +80,11 @@ module Contract
 				# As a result, method invariants may not see the
 				# block arguments to the function under contract.
 				contract.bind(instance).call(*args) {
-					instance.evaluating_contract = false
+					type.evaluating_contract = false
 					result = method.bind(instance).call(*args, &block)
-					instance.evaluating_contract = true
+					type.evaluating_contract = true
 				}
-				instance.evaluating_contract = false
+				type.evaluating_contract = false
 				result
 			end
 		end

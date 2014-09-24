@@ -125,10 +125,10 @@ module MatrixContract
 	def permutation_postcondition?(result)
 		def permutation_vector?(vector)
 			non_zeros = vector.select { |x| x != 0 }
-			non_zeros.length == 1 and non_zeros[0] == 1
+			non_zeros.length == 1 && non_zeros[0] == 1
 		end
 		assert_equal(
-			row_vectors.all?{ |v| permutation_vector?(v) } and
+			row_vectors.all?{ |v| permutation_vector?(v) } &&
 			column_vectors.all?{ |v| permutation_vector?(v) },
 			result,
 			generic_postcondition_failure("permutation?", result)
