@@ -295,7 +295,9 @@ module MatrixContract
 
 	def conjugate_postcondition(result)
 		assert(
-			zip(result).all? { |a, b| a.real == b.real && a.imag == -b.imag },
+			zip(result).all? { |a, b|
+				a.real == b.real && a.imag == -b.imag
+			},
 			generic_postcondition_failure("conjugate", result)
 		)
 	end
