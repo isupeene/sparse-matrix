@@ -70,7 +70,7 @@ module MatrixContract
 
 	def empty_postcondition?(result)
 		assert_equal(
-			all?{ |x| x == 0},
+			count == 0,
 			result,
 			generic_postcondition_failure("empty?", result)
 		)
@@ -86,6 +86,7 @@ module MatrixContract
 		)
 	end
 
+	require_square "hermitian?"
 	const "hermitian?"
 
 	def lower_triangular_postcondition?(result)
@@ -101,7 +102,7 @@ module MatrixContract
 
 	def normal_postcondition?(result)
 		assert_equal(
-			self * conjugate.transpose == conjugate_transpose * self,
+			self * conjugate.transpose == conjugate.transpose * self,
 			result,
 			generic_postcondition_failure("normal?", result)
 		)
