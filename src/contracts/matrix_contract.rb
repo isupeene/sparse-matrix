@@ -223,4 +223,69 @@ module MatrixContract
 	end
 
 	const "zero?"
+
+	##################
+	# Decompositions #
+	##################
+
+	def eigensystem_postcondition(result)
+		v, d, v_inv = *result
+
+		assert(
+			d.diagonal?,
+			"eigensystem returned an invalid matrix of eigenvalues:\n" \
+			"returned #{d} for matrix #{self}"
+		)
+
+		assert_equal(
+			v.inv.round(5),
+			v_inv.round(5),
+			"the inverse of the eigenvector matrix was incorrect:\n" \
+			"v = #{v}, v_inv = #{v_inv}, original matrix: #{self}"
+		)
+
+		assert_equal(
+			self.round(5),
+			(v * d * v_inv).round(5),
+			"eigensystem returned an incorrect result:\n" \
+			"v = #{v}, v_inv = #{v_inv}, d = #{d}\n" \
+			"original matrix = #{self}"
+		)
+	end
+
+	require_square "eigensystem"
+	const "eigensystem"
+
+	def lup_postcondition(result)
+		l, u, p = *result
+
+		assert(
+			l.lower_triangular?,
+			"The 'l' returned by the lup decomposition was not\n" \
+			"lower triangular: #{l}"
+		)
+
+		assert(
+			u.upper_triangular?,
+			"The 'u' returned by the lup decomposition was not\n" \
+			"upper triangular: #{u}"
+		)
+
+		assert(
+			p.permutation?,
+			"The 'p' returned by the lup decomposition was not\n" \
+			"a permutation matrix: #{p}"
+		)
+
+		assert_equal(
+			(l * u).round(5),
+			(p * self).round(5),
+			"The lup decomposition was incorrect:\n" \
+			"l = #{l}, u = #{u}, p = #{p}\n" \
+			"original matrix = #{self}"
+		)
+	end
+
+	require_square "lup"
+	const "lup"
 end
