@@ -286,7 +286,6 @@ module MatrixContract
 		)
 	end
 
-	require_square "lup"
 	const "lup"
 
 	######################
