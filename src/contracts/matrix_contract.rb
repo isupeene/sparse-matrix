@@ -288,4 +288,47 @@ module MatrixContract
 
 	require_square "lup"
 	const "lup"
+
+	######################
+	# Complex Arithmetic #
+	######################
+
+	def conjugate_postcondition(result)
+		assert(
+			zip(result).all? { |a, b|
+				a.real == b.real && a.imag == -b.imag
+			},
+			generic_postcondition_failure("conjugate", result)
+		)
+	end
+
+	const "conjugate"
+
+	def imaginary_postcondition(result)
+		assert(
+			zip(result).all? { |a, b| b.imag == 0 && a.imag == b.real },
+			generic_postcondition_failure("imaginary", result)
+		)
+	end
+
+	const "imaginary"
+
+	def real_postcondition(result)
+		assert(
+			zip(result).all? { |a, b| a.real == b.real && b.imag == 0 },
+			generic_postcondition_failure("real", result)
+		)
+	end
+
+	const "real"
+
+	def rect_postcondition(result)
+		assert_equal(
+			result,
+			[real, imag],
+			generic_postcondition_failure("real", result)
+		)
+	end
+
+	const "rect"
 end
