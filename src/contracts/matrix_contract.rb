@@ -331,4 +331,51 @@ module MatrixContract
 	end
 
 	const "rect"
+
+	###################
+	# Type conversion #
+	###################
+
+	def coerce_precondition(value)
+		assert(
+			value.is_a?(Numeric),
+			"#{self.class} can't be coerced into #{value.class}"
+		)
+	end
+
+	def coerce_postcondition(value, result)
+		other, me = *result
+		assert_nothing_raised(
+			"Coersion from #{value} failed.  Result: #{result}"
+		) { other * me }
+	end
+
+	const "coerce"
+
+	def row_vectors_postcondition(result)
+		assert(
+			each_with_index.all? { |x, i, j| x == result[i][j] },
+			generic_postcondition_failure("row_vectors", result)
+		)
+	end
+
+	const "row_vectors"
+
+	def column_vectors_postcondition(result)
+		assert(
+			each_with_index.all? { |x, i, j| x == result[j][i] },
+			generic_postcondition_failure("column_vectors", result)
+		)
+	end
+
+	const "column_vectors"
+
+	def to_a_postcondition(result)
+		assert(
+			each_with_index.all? { |x, i, j| x == result[i][j] },
+			generic_postcondition_failure("to_a", result)
+		)
+	end
+
+	const "to_a"
 end
