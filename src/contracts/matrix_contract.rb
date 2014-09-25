@@ -12,6 +12,38 @@ module MatrixContract
 	####################
 	# Common Contracts #
 	####################
+	
+	def self.require_multipliable_arg(method_name)
+		add_precondition_contract(method_name) do |instance, value, *args|
+			if is_matrix?(value) 
+				assert_equal(
+					column_size, value.row_size, 
+					"Number of columns in matrix 1 must match " \
+					"the number of rows in matrix 2."
+				)
+			else if (value % 1) != 0
+				assert(
+					false, 
+					"#{method_name} requires either a matrix or " \
+					"a whole number."
+				)
+			end
+		end
+	end
+	
+	def self.require_same_size_matrix(method_name)
+		add_precondition_contract(method_name) do |instance, matrix2, *args|
+			assert(
+				is_matrix?(matrix2), 
+				"#{method_name} requires a matrix argument."
+			)
+			errorMsg = "Matrix dimensions mismatch. \n" \
+				"Matrix 1: rows = #{row_size} cols = #{column_size} \n" \
+				"Matrix 2: rows = #{matrix2.row_size} cols = #{matrix2.column_size}"
+			assert_equal(row_size, matrix2.row_size, errorMsg)
+			assert_equal(column_size, matrix2.column_size, errorMsg)
+		end
+	end
 
 	def self.require_square(method_name)
 		add_precondition_contract(method_name) do |instance, *args|
@@ -36,6 +68,31 @@ module MatrixContract
 			)
 		end
 	end
+	
+	def self.require_regular(method_name)
+		add_precondition_contract(method_name) do |instance, *args|
+			assert(
+				instance.regular?,
+				"#{method_name} can only be called " \
+				"on a regular matrix.\n" \
+				"This matrix has rank: #{rank} \n" \
+				"which is less than row size: #{row_size}"
+			)
+		end
+	end
+	
+	def self.const_matrix(method_name)
+		add_invariant_contract(method_name) do |instance, matrix1, *args, &block|
+			#TODO: For this to work matrix's clone needs to make a deep copy
+			old_matrix = matrix1.clone
+			block.call 
+			assert_equal(
+				old_matrix, matrix1,
+				"method #{instance.class.name}.#{method_name} " \
+				"modified 2nd matrix.\n"
+			)
+		end
+	end
 
 	#########################
 	# Common Error Messages #
@@ -52,6 +109,36 @@ module MatrixContract
 			"Matrix: #{self}; Arguments: #{args}"
 		end
 	end 
+	
+	###########################
+	# Common Helper Functions #
+	###########################
+	
+	def is_matrix?(value)
+		if (
+			value.respond_to?(:row) && value.respond_to?(:column) \
+			&& value.respond_to?(:upper_triangular) \
+			&& value.respond_to?(:lower_triangular)
+		)
+			return true
+		end
+		return false
+	end
+	
+	def contract_matrix_multiply(value, result)
+		result.each_with_index do |val, rowId, colId|
+			expected = 0
+			tempId = 0
+			row[rowId].each do |firstVal|
+				expected = expected + (firstVal * value[tempId,colId])
+				tempId += 1
+			end
+			assert_equal( 
+				expected, val,
+				generic_postcondition_failure("*", result)
+			)
+		end
+	end
 
 	##############
 	# Properties #
@@ -223,6 +310,95 @@ module MatrixContract
 	end
 
 	const "zero?"
+	
+	##############
+	# Arithmetic #
+	##############
+		
+	def op_multiply_postcondition(value, result)
+		if is_matrix?(value)
+			contract_matrix_multiply value, result
+		else
+			result.each_with_index do |val, rowId, colId|
+				assert_equal(
+					self[rowId,colId] * value,
+					val,
+					generic_postcondition_failure("*", result)
+				)
+			end
+		end
+	end
+	
+	require_multipliable_arg "*"
+	const "*"
+	const_matrix "*"
+	
+	def op_add_postcondition(matrix2, result)
+		result.each_with_index do |val, rowId, colId|
+			assert_equal(
+				self[rowId, colId] + matrix2[rowId, colId],
+				val, 
+				generic_postcondition_failure("+", result)
+			)
+		end
+	end
+	
+	require_same_size_matrix "+"
+	const "+"
+	const_matrix "+"
+	
+	def op_subtract_postcondition(matrix2, result)
+		result.each_with_index do |val, rowId, colId|
+			assert_equal(
+				self[rowId, colId] - matrix2[rowId, colId],
+				val, 
+				generic_postcondition_failure("-", result)
+			)
+		end
+	end
+	
+	require_same_size_matrix "-"
+	const "-"
+	const_matrix "-"
+	
+	def op_divide_precondition(value)
+		if is_matrix?(value)
+			assert(
+				value.regular?, 
+				"/ operator requires the second matrix to be invertible."
+			)
+		end
+	end
+	
+	def op_divide_postcondition(value, result)
+		if is_matrix?(value)
+			matrix2 = value.inverse
+			contract_matrix_multiply matrix2, result
+		else
+			result.each_with_index do |val, rowId, colId|
+				assert_equal(
+					self[rowId,colId] * value,
+					val,
+					generic_postcondition_failure("*", result)
+				)
+			end
+		end
+	end
+		
+	require_multipliable_arg "/"
+	const "/"
+	const_matrix "/"
+	
+	def inverse_postcondition(result)
+		assert_equal(
+			self * result, identity(row_size)
+			generic_postcondition_failure("inverse", result)
+		)
+	end
+	
+	require_regular "inverse"
+	require_square "inverse"
+	const "inverse"
 
 	##################
 	# Decompositions #
