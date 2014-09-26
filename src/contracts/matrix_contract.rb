@@ -21,7 +21,7 @@ module MatrixContract
 					"Number of columns in matrix 1 must match " \
 					"the number of rows in matrix 2."
 				)
-			else if (value % 1) != 0
+			elsif value.respond_to?(:modulo)
 				assert(
 					false, 
 					"#{method_name} requires either a matrix or " \
@@ -31,17 +31,29 @@ module MatrixContract
 		end
 	end
 	
+	def self.require_numeric_arg(method_name)
+		add_precondition_contract(method_name) do |instance, value, *args|
+			assert(
+				value.respond_to?(:modulo), 
+				"#{method_name} requires a numeric argument. \n" \
+				"You provided: #{value}"
+			)
+		end
+	end
+	
 	def self.require_same_size_matrix(method_name)
 		add_precondition_contract(method_name) do |instance, matrix2, *args|
+			# Allow vectors
+			matrix2 = instance.convert_vector_to_matrix(matrix2)
 			assert(
-				is_matrix?(matrix2), 
+				instance.is_matrix?(matrix2), 
 				"#{method_name} requires a matrix argument."
 			)
 			errorMsg = "Matrix dimensions mismatch. \n" \
-				"Matrix 1: rows = #{row_size} cols = #{column_size} \n" \
+				"Matrix 1: rows = #{instance.row_size} cols = #{instance.column_size} \n" \
 				"Matrix 2: rows = #{matrix2.row_size} cols = #{matrix2.column_size}"
-			assert_equal(row_size, matrix2.row_size, errorMsg)
-			assert_equal(column_size, matrix2.column_size, errorMsg)
+			assert_equal(instance.row_size, matrix2.row_size, errorMsg)
+			assert_equal(instance.column_size, matrix2.column_size, errorMsg)
 		end
 	end
 
@@ -117,8 +129,8 @@ module MatrixContract
 	def is_matrix?(value)
 		if (
 			value.respond_to?(:row) && value.respond_to?(:column) \
-			&& value.respond_to?(:upper_triangular) \
-			&& value.respond_to?(:lower_triangular)
+			&& value.respond_to?(:upper_triangular?) \
+			&& value.respond_to?(:lower_triangular?)
 		)
 			return true
 		end
@@ -138,6 +150,16 @@ module MatrixContract
 				generic_postcondition_failure("*", result)
 			)
 		end
+	end
+	
+	def convert_vector_to_matrix(matrix2)
+		if matrix2.respond_to?(:covector)
+			matrix2 = matrix2.covector
+			if self.row_size > 1
+				matrix2 = matrix2.transpose
+			end
+		end
+		return matrix2
 	end
 
 	##############
@@ -334,6 +356,7 @@ module MatrixContract
 	const_matrix "*"
 	
 	def op_add_postcondition(matrix2, result)
+		matrix2 = convert_vector_to_matrix(matrix2)
 		result.each_with_index do |val, rowId, colId|
 			assert_equal(
 				self[rowId, colId] + matrix2[rowId, colId],
@@ -348,6 +371,7 @@ module MatrixContract
 	const_matrix "+"
 	
 	def op_subtract_postcondition(matrix2, result)
+		matrix2 = convert_vector_to_matrix(matrix2)
 		result.each_with_index do |val, rowId, colId|
 			assert_equal(
 				self[rowId, colId] - matrix2[rowId, colId],
@@ -389,9 +413,55 @@ module MatrixContract
 	const "/"
 	const_matrix "/"
 	
+	def op_power_postcondition(value, result)
+		if value % 1 == 0
+			if value == 0
+				assert_equal(
+					identity(row_size), result,
+					generic_postcondition_failure("**", result)
+				)
+			elsif value < 0
+				expected = self
+				(1..value).each do |i|
+					expected = expected / self
+				end
+				assert_equal(
+					expected, result,
+					generic_postcondition_failure("**", result)
+				)
+			else
+				expected = self
+				(2..value).each do |i|
+					expected = expected * self
+				end
+				assert_equal(
+					expected, result,
+					generic_postcondition_failure("**", result)
+				)
+			end
+		else
+			v, d, v_inv = eigensystem
+			diagonalElements = Array.new(d.row_size)
+			d.each_with_index do |element, rowId, colId|
+				if rowId == colId 
+					diagonalElements[rowId] = element ** value
+				end
+			end
+			assert_equal(
+				v * Matrix.diagonal(*diagonalElements) * v_inv,
+				result,
+				generic_postcondition_failure("**", result)
+				)
+		end
+	end
+	
+	require_numeric_arg "**"
+	require_square "**"
+	const "**"
+		
 	def inverse_postcondition(result)
 		assert_equal(
-			self * result, identity(row_size)
+			self * result, identity(row_size),
 			generic_postcondition_failure("inverse", result)
 		)
 	end
