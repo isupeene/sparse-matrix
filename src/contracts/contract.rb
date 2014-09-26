@@ -112,8 +112,6 @@ module Contract
 			|m| m.to_s.end_with?(contract_suffix)
 		}.each \
 		do |contract|
-			puts contract.to_s
-			puts method_name(contract.to_s)
 			method = type.instance_method(method_name(contract.to_s))
 			yield type.instance_method(contract), method
 		end
