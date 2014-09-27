@@ -5,6 +5,9 @@ module MatrixContract
 	extend Contract
 	include Test::Unit::Assertions
 
+	ADD_SUB_TYPE = "Add_Sub"
+	MULT_DIV_TYPE = "Mult_Div"
+	
 	def invariant
 		# TODO: Class invariant
 	end
@@ -13,35 +16,95 @@ module MatrixContract
 	# Common Contracts #
 	####################
 	
-	def self.require_multipliable_arg(method_name)
-		add_precondition_contract(method_name) do |instance, value, *args|
-			matrix2 = instance.convert_vector_to_matrix(value)
-			if instance.is_matrix?(matrix2) 
+	def self.add_sub_postcondition(method_name, &numBlock)
+		add_postcondition_contract(method_name) do |instance, matrix2, result, *args|
+			matrix2 = instance.convert_vector_to_matrix(ADD_SUB_TYPE, matrix2)
+			if instance.is_matrix?(matrix2)
+				if instance.empty?
+					assert_equal(
+						instance, result,
+						instance.generic_postcondition_failure(method_name, result)
+					)
+				else
+					assert(
+						result.each_with_index.all? do |val, rowId, colId|
+							numBlock.call(instance, matrix2, rowId, colId) == val
+						end,
+						instance.generic_postcondition_failure(method_name, result)
+					)
+				end
+			else
+				coercion = value.coerce(self)
 				assert_equal(
-					instance.column_size, value.row_size, 
-					"Number of columns in matrix 1 must match " \
-					"the number of rows in matrix 2."
-				)
-			else 
-				assert(
-					instance.is_numeric?(matrix2), 
-					"#{method_name} requires either a matrix or " \
-					"a number."
+					coercion[0].send(method_name, coercion[1]),
+					result,
+					instance.generic_postcondition_failure(method_name, result)
 				)
 			end
 		end
 	end
 	
+	def self.mult_div_postcondition(method_name, &numBlock)
+		add_postcondition_contract(method_name) do |instance, value, result, *args|
+			value = instance.convert_vector_to_matrix(MULT_DIV_TYPE, value)
+			if instance.is_matrix?(value)
+				if instance.empty? || value.empty?
+					instance.empty_matrix_mult_div method_name, value, result
+				else
+					if method_name == "/"
+						value = value.inverse
+					end
+					instance.contract_matrix_multiply method_name, value, result
+				end
+			elsif value.is_a?(Numeric)
+				assert(
+					result.each_with_index.all? do |val, rowId, colId|
+						numBlock.call(instance, value, rowId, colId) == val
+					end,
+					instance.generic_postcondition_failure(method_name, result)
+				)
+			else
+				coercion = value.coerce(instance)
+				assert_equal(
+					coercion[0].send(method_name, coercion[1]),
+					result,
+					instance.generic_postcondition_failure(method_name, result)
+				)
+			end
+
+		end
+	end
+	
+	def self.require_multipliable_arg(method_name)
+		add_precondition_contract(method_name) do |instance, value, *args|
+			matrix2 = instance.convert_vector_to_matrix(MULT_DIV_TYPE, value)
+			if instance.is_matrix?(matrix2) 
+				assert_equal(
+					instance.column_size, matrix2.row_size, 
+					"Number of columns in matrix 1 must match " \
+					"the number of rows in matrix 2."
+				)
+			elsif !matrix2.is_a?(Numeric)
+				assert_nothing_raised \
+					"#{method_name} requires either a matrix, a " \
+					"number or a value that can be coerced into one." do
+						matrix2.coerce(instance)
+					end				
+			end
+
+		end
+	end
+	
 	def self.require_non_empty_result(method_name)
 		add_postcondition_contract(method_name) do |instance, *args, result|
-			assert(!result.empty?, "#{method_name} returned an empty matrix")
+			assert(result.count > 0, "#{method_name} returned an empty result.")
 		end
 	end
 	
 	def self.require_numeric_arg(method_name)
 		add_precondition_contract(method_name) do |instance, value, *args|
 			assert(
-				instance.is_numeric?(value), 
+				value.is_a?(Numeric), 
 				"#{method_name} requires a numeric argument. \n" \
 				"You provided: #{value}"
 			)
@@ -51,16 +114,20 @@ module MatrixContract
 	def self.require_same_size_matrix(method_name)
 		add_precondition_contract(method_name) do |instance, matrix2, *args|
 			# Allow vectors
-			matrix2 = instance.convert_vector_to_matrix(matrix2)
-			assert(
-				instance.is_matrix?(matrix2), 
-				"#{method_name} #{matrix2} requires a matrix argument."
-			)
-			errorMsg = "Matrix dimensions mismatch. \n" \
-				"Matrix 1: rows = #{instance.row_size} cols = #{instance.column_size} \n" \
-				"Matrix 2: rows = #{matrix2.row_size} cols = #{matrix2.column_size}"
-			assert_equal(instance.row_size, matrix2.row_size, errorMsg)
-			assert_equal(instance.column_size, matrix2.column_size, errorMsg)
+			matrix2 = instance.convert_vector_to_matrix(ADD_SUB_TYPE, matrix2)
+			if instance.is_matrix?(matrix2)
+				errorMsg = "Matrix dimensions mismatch. \n" \
+					"Matrix 1: rows = #{instance.row_size} cols = #{instance.column_size} \n" \
+					"Matrix 2: rows = #{matrix2.row_size} cols = #{matrix2.column_size}"
+				assert_equal(instance.row_size, matrix2.row_size, errorMsg)
+				assert_equal(instance.column_size, matrix2.column_size, errorMsg)
+			else
+				assert_nothing_raised \
+					"#{method_name} requires either a matrix, a " \
+					"number or a value that can be coerced into one." do
+						matrix2.coerce(instance)
+					end
+			end
 		end
 	end
 
@@ -102,22 +169,19 @@ module MatrixContract
 	
 	def self.const_arguments(method_name)
 		add_invariant_contract(method_name) do |instance, *args, &block|
-			old_args = Array.new(args.size)
-			args.each_index do |i|
-				if instance.is_numeric?(args[i])
-					old_args[i] = args[i]
-				else
-					old_args[i] = args[i].clone
+			old_args = args.map do |x|
+				begin
+					x.clone
+				rescue
+					x
 				end
 			end
 			block.call
-			args.each_index do |i|
-				assert_equal(
-					old_args[i], args[i],
-					"method #{instance.class.name}.#{method_name} " \
-					"modified 2nd matrix.\n"
-				)
-			end
+			assert_equal(
+				old_args, args,
+				"method #{instance.class.name}.#{method_name} " \
+				"modified 2nd matrix.\n"
+			)
 		end
 	end
 
@@ -149,33 +213,41 @@ module MatrixContract
 		)
 	end
 	
-	def is_numeric?(value)
-		return value.respond_to?(:modulo) && value.respond_to?(:remainder)
+	def contract_matrix_multiply(oper, value, result)
+		assert( 
+			result.each_with_index.all? do |val, rowId, colId|
+				val == row(rowId).zip(value.column(colId)).map{ |x, y| x * y }.reduce(:+)
+			end,
+			generic_postcondition_failure(oper, result)
+		)
 	end
 	
-	def contract_matrix_multiply(value, result)
-		result.each_with_index do |val, rowId, colId|
-			expected = 0
-			tempId = 0
-			row(rowId).each do |firstVal|
-				expected = expected + (firstVal * value[tempId,colId])
-				tempId += 1
-			end
-			assert_equal( 
-				expected, val,
-				generic_postcondition_failure("*", result)
-			)
-		end
-	end
-	
-	def convert_vector_to_matrix(matrix2)
+	def convert_vector_to_matrix(type, matrix2)
 		if matrix2.respond_to?(:covector)
 			matrix2 = matrix2.covector
-			if self.row_size > 1
+			if self.row_size > 1 && type == ADD_SUB_TYPE
 				matrix2 = matrix2.transpose
+			elsif self.row_size == 1 && type == MULT_DIV_TYPE
+				
 			end
 		end
 		return matrix2
+	end
+	
+	def empty_matrix_mult_div(oper, matrix2, result)
+		if empty? && matrix2.empty?
+			assert_equal(
+				Matrix.zero(row_size, matrix2.column_size),
+				result,
+				generic_postcondition_failure(oper, result)
+			)
+		else
+			assert_equal(
+				Matrix.empty(row_size, matrix2.column_size),
+				result,
+				generic_postcondition_failure(oper, result)
+			)
+		end
 	end
 
 	##############
@@ -352,55 +424,28 @@ module MatrixContract
 	##############
 	# Arithmetic #
 	##############
-		
-	def op_multiply_postcondition(value, result)
-		if is_matrix?(value)
-			contract_matrix_multiply value, result
-		else
-			result.each_with_index do |val, rowId, colId|
-				assert_equal(
-					self[rowId,colId] * value,
-					val,
-					generic_postcondition_failure("*", result)
-				)
-			end
-		end
-	end
 	
 	require_multipliable_arg "*"
 	require_non_empty_result "*"
+	mult_div_postcondition "*" do |instance, value, rowId, colId|
+		instance[rowId,colId] * value
+	end
 	const "*"
 	const_arguments "*"
 	
-	def op_add_postcondition(matrix2, result)
-		matrix2 = convert_vector_to_matrix(matrix2)
-		result.each_with_index do |val, rowId, colId|
-			assert_equal(
-				self[rowId, colId] + matrix2[rowId, colId],
-				val, 
-				generic_postcondition_failure("+", result)
-			)
-		end
-	end
-	
 	require_same_size_matrix "+"
 	require_non_empty_result "+"
+	add_sub_postcondition "+" do |instance, matrix2, rowId, colId|
+		instance[rowId, colId] + matrix2[rowId, colId]
+	end
 	const "+"
 	const_arguments "+"
 	
-	def op_subtract_postcondition(matrix2, result)
-		matrix2 = convert_vector_to_matrix(matrix2)
-		result.each_with_index do |val, rowId, colId|
-			assert_equal(
-				self[rowId, colId] - matrix2[rowId, colId],
-				val, 
-				generic_postcondition_failure("-", result)
-			)
-		end
-	end
-	
 	require_same_size_matrix "-"
 	require_non_empty_result "-"
+	add_sub_postcondition "-" do |instance, matrix2, rowId, colId|
+		instance[rowId, colId] - matrix2[rowId, colId]
+	end
 	const "-"
 	const_arguments "-"
 	
@@ -412,24 +457,12 @@ module MatrixContract
 			)
 		end
 	end
-	
-	def op_divide_postcondition(value, result)
-		if is_matrix?(value)
-			matrix2 = value.inverse
-			contract_matrix_multiply matrix2, result
-		else
-			result.each_with_index do |val, rowId, colId|
-				assert_equal(
-					self[rowId,colId] / value,
-					val,
-					generic_postcondition_failure("/", result)
-				)
-			end
-		end
-	end
 		
 	require_multipliable_arg "/"
 	require_non_empty_result "/"
+	mult_div_postcondition "/" do |instance, value, rowId, colId|
+		instance[rowId,colId] / value
+	end
 	const "/"
 	const_arguments "/"
 	
@@ -461,12 +494,7 @@ module MatrixContract
 			end
 		else
 			v, d, v_inv = eigensystem
-			diagonalElements = Array.new(d.row_size)
-			d.each_with_index do |element, rowId, colId|
-				if rowId == colId 
-					diagonalElements[rowId] = element ** value
-				end
-			end
+			diagonalElements = d.each_with_index.select{|x,i,j| i==j}.collect{|x| x[0]}
 			assert_equal(
 				v * Matrix.diagonal(*diagonalElements) * v_inv,
 				result,
@@ -482,7 +510,7 @@ module MatrixContract
 		
 	def inverse_postcondition(result)
 		assert_equal(
-			self * result, Matrix.identity(row_size),
+			(self * result).round(5), Matrix.identity(row_size),
 			generic_postcondition_failure("inverse", result)
 		)
 	end
