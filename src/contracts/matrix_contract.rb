@@ -15,26 +15,33 @@ module MatrixContract
 	
 	def self.require_multipliable_arg(method_name)
 		add_precondition_contract(method_name) do |instance, value, *args|
-			if is_matrix?(value) 
+			matrix2 = instance.convert_vector_to_matrix(value)
+			if instance.is_matrix?(matrix2) 
 				assert_equal(
-					column_size, value.row_size, 
+					instance.column_size, value.row_size, 
 					"Number of columns in matrix 1 must match " \
 					"the number of rows in matrix 2."
 				)
-			elsif value.respond_to?(:modulo)
+			else 
 				assert(
-					false, 
+					instance.is_numeric?(matrix2), 
 					"#{method_name} requires either a matrix or " \
-					"a whole number."
+					"a number."
 				)
 			end
+		end
+	end
+	
+	def self.require_non_empty_result(method_name)
+		add_postcondition_contract(method_name) do |instance, *args, result|
+			assert(!result.empty?, "#{method_name} returned an empty matrix")
 		end
 	end
 	
 	def self.require_numeric_arg(method_name)
 		add_precondition_contract(method_name) do |instance, value, *args|
 			assert(
-				value.respond_to?(:modulo), 
+				instance.is_numeric?(value), 
 				"#{method_name} requires a numeric argument. \n" \
 				"You provided: #{value}"
 			)
@@ -47,7 +54,7 @@ module MatrixContract
 			matrix2 = instance.convert_vector_to_matrix(matrix2)
 			assert(
 				instance.is_matrix?(matrix2), 
-				"#{method_name} requires a matrix argument."
+				"#{method_name} #{matrix2} requires a matrix argument."
 			)
 			errorMsg = "Matrix dimensions mismatch. \n" \
 				"Matrix 1: rows = #{instance.row_size} cols = #{instance.column_size} \n" \
@@ -87,22 +94,30 @@ module MatrixContract
 				instance.regular?,
 				"#{method_name} can only be called " \
 				"on a regular matrix.\n" \
-				"This matrix has rank: #{rank} \n" \
-				"which is less than row size: #{row_size}"
+				"This matrix has rank: #{instance.rank} \n" \
+				"which is less than row size: #{instance.row_size}"
 			)
 		end
 	end
 	
-	def self.const_matrix(method_name)
-		add_invariant_contract(method_name) do |instance, matrix1, *args, &block|
-			#TODO: For this to work matrix's clone needs to make a deep copy
-			old_matrix = matrix1.clone
-			block.call 
-			assert_equal(
-				old_matrix, matrix1,
-				"method #{instance.class.name}.#{method_name} " \
-				"modified 2nd matrix.\n"
-			)
+	def self.const_arguments(method_name)
+		add_invariant_contract(method_name) do |instance, *args, &block|
+			old_args = Array.new(args.size)
+			args.each_index do |i|
+				if instance.is_numeric?(args[i])
+					old_args[i] = args[i]
+				else
+					old_args[i] = args[i].clone
+				end
+			end
+			block.call
+			args.each_index do |i|
+				assert_equal(
+					old_args[i], args[i],
+					"method #{instance.class.name}.#{method_name} " \
+					"modified 2nd matrix.\n"
+				)
+			end
 		end
 	end
 
@@ -127,21 +142,22 @@ module MatrixContract
 	###########################
 	
 	def is_matrix?(value)
-		if (
+		return ( 
 			value.respond_to?(:row) && value.respond_to?(:column) \
 			&& value.respond_to?(:upper_triangular?) \
-			&& value.respond_to?(:lower_triangular?)
+			&& value.respond_to?(:lower_triangular?) 
 		)
-			return true
-		end
-		return false
+	end
+	
+	def is_numeric?(value)
+		return value.respond_to?(:modulo) && value.respond_to?(:remainder)
 	end
 	
 	def contract_matrix_multiply(value, result)
 		result.each_with_index do |val, rowId, colId|
 			expected = 0
 			tempId = 0
-			row[rowId].each do |firstVal|
+			row(rowId).each do |firstVal|
 				expected = expected + (firstVal * value[tempId,colId])
 				tempId += 1
 			end
@@ -352,8 +368,9 @@ module MatrixContract
 	end
 	
 	require_multipliable_arg "*"
+	require_non_empty_result "*"
 	const "*"
-	const_matrix "*"
+	const_arguments "*"
 	
 	def op_add_postcondition(matrix2, result)
 		matrix2 = convert_vector_to_matrix(matrix2)
@@ -367,8 +384,9 @@ module MatrixContract
 	end
 	
 	require_same_size_matrix "+"
+	require_non_empty_result "+"
 	const "+"
-	const_matrix "+"
+	const_arguments "+"
 	
 	def op_subtract_postcondition(matrix2, result)
 		matrix2 = convert_vector_to_matrix(matrix2)
@@ -382,8 +400,9 @@ module MatrixContract
 	end
 	
 	require_same_size_matrix "-"
+	require_non_empty_result "-"
 	const "-"
-	const_matrix "-"
+	const_arguments "-"
 	
 	def op_divide_precondition(value)
 		if is_matrix?(value)
@@ -401,17 +420,18 @@ module MatrixContract
 		else
 			result.each_with_index do |val, rowId, colId|
 				assert_equal(
-					self[rowId,colId] * value,
+					self[rowId,colId] / value,
 					val,
-					generic_postcondition_failure("*", result)
+					generic_postcondition_failure("/", result)
 				)
 			end
 		end
 	end
 		
 	require_multipliable_arg "/"
+	require_non_empty_result "/"
 	const "/"
-	const_matrix "/"
+	const_arguments "/"
 	
 	def op_power_postcondition(value, result)
 		if value % 1 == 0
@@ -457,11 +477,12 @@ module MatrixContract
 	
 	require_numeric_arg "**"
 	require_square "**"
+	require_non_empty_result "**"
 	const "**"
 		
 	def inverse_postcondition(result)
 		assert_equal(
-			self * result, identity(row_size),
+			self * result, Matrix.identity(row_size),
 			generic_postcondition_failure("inverse", result)
 		)
 	end
