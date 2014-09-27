@@ -95,12 +95,6 @@ module MatrixContract
 		end
 	end
 	
-	def self.require_non_empty_result(method_name)
-		add_postcondition_contract(method_name) do |instance, *args, result|
-			assert(result.count > 0, "#{method_name} returned an empty result.")
-		end
-	end
-	
 	def self.require_numeric_arg(method_name)
 		add_precondition_contract(method_name) do |instance, value, *args|
 			assert(
@@ -426,7 +420,6 @@ module MatrixContract
 	##############
 	
 	require_multipliable_arg "*"
-	require_non_empty_result "*"
 	mult_div_postcondition "*" do |instance, value, rowId, colId|
 		instance[rowId,colId] * value
 	end
@@ -434,7 +427,6 @@ module MatrixContract
 	const_arguments "*"
 	
 	require_same_size_matrix "+"
-	require_non_empty_result "+"
 	add_sub_postcondition "+" do |instance, matrix2, rowId, colId|
 		instance[rowId, colId] + matrix2[rowId, colId]
 	end
@@ -442,7 +434,6 @@ module MatrixContract
 	const_arguments "+"
 	
 	require_same_size_matrix "-"
-	require_non_empty_result "-"
 	add_sub_postcondition "-" do |instance, matrix2, rowId, colId|
 		instance[rowId, colId] - matrix2[rowId, colId]
 	end
@@ -459,7 +450,6 @@ module MatrixContract
 	end
 		
 	require_multipliable_arg "/"
-	require_non_empty_result "/"
 	mult_div_postcondition "/" do |instance, value, rowId, colId|
 		instance[rowId,colId] / value
 	end
@@ -467,45 +457,51 @@ module MatrixContract
 	const_arguments "/"
 	
 	def op_power_postcondition(value, result)
-		if value % 1 == 0
-			if value == 0
-				assert_equal(
-					identity(row_size), result,
-					generic_postcondition_failure("**", result)
-				)
-			elsif value < 0
-				expected = self
-				(1..value).each do |i|
-					expected = expected / self
+		if empty?
+			assert_equal(
+				self, result,
+				generic_postcondition_failure("**", result)
+			)
+		else
+			if value % 1 == 0
+				if value == 0
+					assert_equal(
+						identity(row_size), result,
+						generic_postcondition_failure("**", result)
+					)
+				elsif value < 0
+					expected = self
+					(1..value).each do |i|
+						expected = expected / self
+					end
+					assert_equal(
+						expected, result,
+						generic_postcondition_failure("**", result)
+					)
+				else
+					expected = self
+					(2..value).each do |i|
+						expected = expected * self
+					end
+					assert_equal(
+						expected, result,
+						generic_postcondition_failure("**", result)
+					)
 				end
-				assert_equal(
-					expected, result,
-					generic_postcondition_failure("**", result)
-				)
 			else
-				expected = self
-				(2..value).each do |i|
-					expected = expected * self
-				end
+				v, d, v_inv = eigensystem
+				diagonalElements = d.each_with_index.select{|x,i,j| i==j}.collect{|x| x[0]}
 				assert_equal(
-					expected, result,
+					v * Matrix.diagonal(*diagonalElements) * v_inv,
+					result,
 					generic_postcondition_failure("**", result)
 				)
 			end
-		else
-			v, d, v_inv = eigensystem
-			diagonalElements = d.each_with_index.select{|x,i,j| i==j}.collect{|x| x[0]}
-			assert_equal(
-				v * Matrix.diagonal(*diagonalElements) * v_inv,
-				result,
-				generic_postcondition_failure("**", result)
-				)
 		end
 	end
 	
 	require_numeric_arg "**"
 	require_square "**"
-	require_non_empty_result "**"
 	const "**"
 		
 	def inverse_postcondition(result)
