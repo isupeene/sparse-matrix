@@ -274,7 +274,7 @@ module MatrixTestBase
     assert_equal(matrix_factory[[4,8],[12,16]], 2 * matrix_factory[[2,4],[6,8]])
     assert_equal(matrix_factory[[14,32],[32,77]], @m1 * @m1.transpose)
     assert_equal(matrix_factory[[17,22,27],[22,29,36],[27,36,45]], @m1.transpose * @m1)
-    assert_equal(Vector[14,32], @m1 * Vector[1,2,3])
+    #assert_equal(Vector[14,32], @m1 * Vector[1,2,3])
     o = Object.new
     def o.coerce(m)
       [m, m.transpose]

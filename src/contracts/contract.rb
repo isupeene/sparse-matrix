@@ -24,8 +24,11 @@ module Contract
 			def evaluate_contract
 				unless self.evaluating_contract
 					self.evaluating_contract = true
-					yield
-					self.evaluating_contract = false
+					begin
+						yield
+					ensure
+						self.evaluating_contract = false
+					end
 				end
 			end
 		end
@@ -79,12 +82,15 @@ module Contract
 				# the function an assigns it to result.
 				# As a result, method invariants may not see the
 				# block arguments to the function under contract.
-				contract.bind(instance).call(*args) {
+				begin
+					contract.bind(instance).call(*args) {
+						type.evaluating_contract = false
+						result = method.bind(instance).call(*args, &block)
+						type.evaluating_contract = true
+					}
+				ensure
 					type.evaluating_contract = false
-					result = method.bind(instance).call(*args, &block)
-					type.evaluating_contract = true
-				}
-				type.evaluating_contract = false
+				end
 				result
 			end
 		end
