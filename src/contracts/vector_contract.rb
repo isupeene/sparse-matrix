@@ -329,11 +329,9 @@ module VectorContract
 
 	def coerce_postcondition(value, result)
 		other, me = *result
-		assert(
-			other == Matrix::Scalar.new(value) &&
-			me.equal?(self),
+		assert_nothing_raised(
 			generic_postcondition_failure(:coerce, result)
-		)
+		) { other * me }
 	end
 
 	const "coerce"
