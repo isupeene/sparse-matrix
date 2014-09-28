@@ -14,16 +14,6 @@ module VectorContract
 	# Common Contracts #
 	####################
 
-	def self.take_vector(method_name)
-		add_precondition_contract(method_name) do |instance, arg|
-			assert(
-				arg.class.include?(VectorContract),
-				"Method #{method_name} expects to take a vector.\n" \
-				"Got a #{arg.class} instead."
-			)
-		end
-	end
-
 	def self.return_vector(method_name)
 		add_postcondition_contract(method_name) do |instance, *args, result|
 			assert(
