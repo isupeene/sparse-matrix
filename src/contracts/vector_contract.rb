@@ -34,15 +34,6 @@ module VectorContract
 		end
 	end
 
-	def can_execute_with_coersion?(value)
-		begin
-			yield *value.coerce(self)
-			return true
-		rescue
-			return false
-		end
-	end
-
 	#########################
 	# Common Error Messages #
 	#########################
