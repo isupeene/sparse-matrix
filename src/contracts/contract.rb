@@ -182,5 +182,57 @@ module Contract
 			)
 		end
 	end
+
+	def satisfies_type_restriction?(value, type)
+		if type.kind_of?(Contract)
+			return value.class.include?(type)
+		else
+			return value.is_a?(type)
+		end
+	end
+
+	# TODO: It's probably more elegant and idiomatic to pass
+	# symbols around, and call to_s on them when necessary,
+	# rather than passing strings around and calling to_sym.
+	def can_execute_with_coercion?(op, value, instance)
+		begin
+			op.to_sym.to_proc.call(*value.coerce(instance))
+			return true
+		rescue Exception => ex
+			puts ex
+			return false
+		end
+	end
+
+	def require_argument_types(method_name, *types)
+		add_precondition_contract(method_name) do |instance, *args|
+			args.each.with_index do |arg, i|
+				assert(
+					types[i].any? { |type|
+						satisfies_type_restriction?(arg, type)
+					},
+					"Argument #{i} to #{method_name} must be of\n" \
+					"one of the following types or satisfy one of\n" \
+					"the following contracts: #{types}.\n" \
+					"Got #{arg.class}"
+				)
+			end
+		end
+	end
+
+	def require_operand_types(op_name, *types)
+		add_precondition_contract(op_name) do |instance, operand|
+			assert(
+				types.any? { |type|
+					satisfies_type_restriction?(operand, type)
+				} ||
+				can_execute_with_coercion?(op_name, operand, instance),
+				"The operand to #{op_name} must belong to one of the\n" \
+				"following types or satisfy one of the\n" \
+				"following contracts: #{types}, or be coercible\n" \
+				"into a compatible type. Got #{operand.class}"
+			)
+		end
+	end
 end
 
