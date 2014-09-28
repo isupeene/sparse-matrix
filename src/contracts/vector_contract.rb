@@ -208,9 +208,7 @@ module VectorContract
 	end
 
 	def op_subtract_postcondition(value, result)
-		if value.is_a?(Numeric)
-			op_add_postcondition(-value, result)
-		elsif value.class.include?(VectorContract) ||
+		if value.class.include?(VectorContract) ||
 		      value.class.include?(MatrixContract)
 			op_add_postcondition(value.collect{ |x| -x }, result)
 		end
