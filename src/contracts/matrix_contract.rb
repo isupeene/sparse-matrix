@@ -34,7 +34,7 @@ module MatrixContract
 					)
 				end
 			else
-				coercion = value.coerce(self)
+				coercion = matrix2.coerce(instance)
 				assert_equal(
 					coercion[0].send(method_name, coercion[1]),
 					result,
@@ -160,6 +160,16 @@ module MatrixContract
 			)
 		end
 	end
+	
+	def self.return_matrix(method_name)
+		add_postcondition_contract(method_name) do |instance, *args, result|
+			assert(
+				result.class.include?(MatrixContract),
+				"Method #{method_name} expected to return a matrix.\n" \
+				"Returned a #{result.class} instead."
+			)
+		end
+	end
 
 	#########################
 	# Common Error Messages #
@@ -182,11 +192,7 @@ module MatrixContract
 	###########################
 	
 	def is_matrix?(value)
-		return ( 
-			value.respond_to?(:row) && value.respond_to?(:column) \
-			&& value.respond_to?(:upper_triangular?) \
-			&& value.respond_to?(:lower_triangular?) 
-		)
+		value.class.include?(MatrixContract)
 	end
 	
 	def contract_matrix_multiply(oper, value, result)
@@ -196,6 +202,32 @@ module MatrixContract
 			end,
 			generic_postcondition_failure(oper, result)
 		)
+	end
+	
+	def contract_gaussian_elimination
+		#TODO: Try and remove loops and also maybe give credit as code is adapted from Matrix class' rank function
+		a = to_a
+		last_col = column_size - 1
+		last_row = row_size - 1
+		pivot_row = 0
+		0.upto(last_col) do |k|
+			switch_row = (pivot_row .. last_row).find {|row|
+				a[row][k] != 0
+			}
+			if switch_row
+				a[switch_row], a[pivot_row] = a[pivot_row], a[switch_row] unless pivot_row == switch_row
+				pivot = a[pivot_row][k]
+				(pivot_row + 1).upto(last_row) do |i|
+					ai = a[i]
+					(k + 1).upto(last_col) do |j|
+						ai[j] =  (ai[j] - ai[k].to_f / pivot.to_f * a[pivot_row][j])
+					end
+					ai[k] = 0
+				end
+				pivot_row += 1
+			end
+		end
+		return Matrix.rows(a)
 	end
 	
 	def convert_vector_to_matrix(type, matrix2)
@@ -405,6 +437,7 @@ module MatrixContract
 	mult_div_postcondition "*" do |instance, value, rowId, colId|
 		instance[rowId,colId] * value
 	end
+	return_matrix "*"
 	const "*"
 	const_arguments "*"
 	
@@ -412,6 +445,7 @@ module MatrixContract
 	add_sub_postcondition "+" do |instance, matrix2, rowId, colId|
 		instance[rowId, colId] + matrix2[rowId, colId]
 	end
+	return_matrix "+"
 	const "+"
 	const_arguments "+"
 	
@@ -419,6 +453,7 @@ module MatrixContract
 	add_sub_postcondition "-" do |instance, matrix2, rowId, colId|
 		instance[rowId, colId] - matrix2[rowId, colId]
 	end
+	return_matrix "-"
 	const "-"
 	const_arguments "-"
 	
@@ -435,6 +470,7 @@ module MatrixContract
 	mult_div_postcondition "/" do |instance, value, rowId, colId|
 		instance[rowId,colId] / value
 	end
+	return_matrix "/"
 	const "/"
 	const_arguments "/"
 	
@@ -484,7 +520,20 @@ module MatrixContract
 	
 	require_numeric_arg "**"
 	require_square "**"
+	return_matrix "**"
 	const "**"
+	
+	def op_equal_postcondition(value, result)
+		assert_equal(
+			zip(value).all? {|x,y| x == y}, result,
+			generic_postcondition_failure("==", result)
+		)
+	end
+	
+	require_operand_types "==",
+		MatrixContract
+	const_arguments "=="
+	const "=="
 		
 	def inverse_postcondition(result)
 		assert_equal(
@@ -495,8 +544,104 @@ module MatrixContract
 	
 	require_regular "inverse"
 	require_square "inverse"
+	return_matrix "inverse"
 	const "inverse"
-
+	
+	#############
+	# Functions #
+	#############
+	
+	def determinant_postcondition(result)
+		value = self
+		unless upper_triangular?
+			value = contract_gaussian_elimination
+		end
+		assert_equal(
+			value.each_with_index.select{|x,i,j| i==j}.collect{|x| x[0]}.reduce(:*),
+			result,
+			generic_postcondition_failure("determinant", result)
+		)
+	end
+	
+	require_square "determinant"
+	const "determinant"
+	
+	def minor_precondition(*args)
+		assert( args.size == 2 || args.size == 4,
+			"Wrong number of args to minor. \n" \
+			"Requires: 2 or 4, Provided: #{args.size}"
+		)
+	end
+	
+	def minor_postcondition(*args, result)
+		case args.size
+		when 2
+			row_range, col_range = args
+		when 4
+			row_start, row_count, col_start, col_count = args
+			row_range = Range.new(row_start, row_start + row_count - 1)
+			col_range = Range.new(col_start, col_start + col_count - 1)
+		end
+			
+		assert(
+			each_with_index.select{ |x,i,j| row_range === i && col_range === j }.all?{ |x, i, j|
+				x == result[i - row_range.begin, j - col_range.begin]
+			},
+			generic_postcondition_failure("minor", result)
+		)
+	end
+	
+	require_operand_types "minor", Numeric, Range
+	const "minor"
+	
+	def rank_postcondition(result)
+		value = self
+		unless upper_triangular?
+			value = contract_gaussian_elimination
+		end
+		nonzero_rows = value.row_vectors.count{|x| x.any?{|y| y != 0} }
+		
+		assert_equal(
+			[row_size, column_size, nonzero_rows].min,
+			result,
+			generic_postcondition_failure("rank", result)
+		)
+	end
+	
+	const "rank"
+	
+	def round_postcondition(value, result)
+		assert_equal(count, result.count, generic_postcondition_failure("round", result))
+		assert(
+			zip(result).all?{|x, y| x.round(value) == y},
+			generic_postcondition_failure("round", result)
+		)
+	end
+	
+	require_argument_types "round", [Numeric]
+	return_matrix "round"
+	const "round"
+	
+	def trace_postcondition(result)
+		assert_equal(
+			each_with_index.select{|x,i,j| i==j}.collect{|x| x[0]}.reduce(:+),
+			result,
+			generic_postcondition_failure("trace", result)
+		)
+	end
+	
+	require_square "trace"
+	const "trace"
+	
+	def transpose_postconiditon(result)
+		assert(
+			each_with_index.all?{|x,i,j| x == result[j,i]},
+			generic_postcondition_failure("trace", result)
+		)
+	end
+	
+	const "transpose"
+	
 	##################
 	# Decompositions #
 	##################
