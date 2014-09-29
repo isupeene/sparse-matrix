@@ -234,5 +234,42 @@ module Contract
 			)
 		end
 	end
+
+	def cloneable(value)
+		begin
+			return value.clone == value
+		rescue
+			return false
+		end
+	end
+
+	def clone_if_possible(args, arg_indices)
+		cloneable_args = arg_indices
+			.map{ |i| args[i] }
+			.select{ |x| cloneable(x) }
+
+		return cloneable_args, cloneable_args.map{ |x| x.clone }
+	end
+
+	def const_arguments(method_name, *arg_indices)
+		add_invariant_contract(method_name) do |instance, *args, &block|
+			arg_indices = arg_indices.empty? ?
+				(0...args.length).to_a :
+				arg_indices
+
+			cloneable_args, cloned_args =
+				clone_if_possible(args, arg_indices)
+
+			block.call
+
+			assert_equal(
+				cloned_args,
+				cloneable_args,
+				"The following args were supposed to remain const\n" \
+				"during #{method_name}: #{cloneable_args}.\n" \
+				"They were modified to #{cloned_args} instead."
+			)
+		end
+	end
 end
 

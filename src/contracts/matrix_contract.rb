@@ -160,24 +160,6 @@ module MatrixContract
 			)
 		end
 	end
-	
-	def self.const_arguments(method_name)
-		add_invariant_contract(method_name) do |instance, *args, &block|
-			old_args = args.map do |x|
-				begin
-					x.clone
-				rescue
-					x
-				end
-			end
-			block.call
-			assert_equal(
-				old_args, args,
-				"method #{instance.class.name}.#{method_name} " \
-				"modified 2nd matrix.\n"
-			)
-		end
-	end
 
 	#########################
 	# Common Error Messages #
