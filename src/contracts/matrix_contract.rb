@@ -524,6 +524,8 @@ module MatrixContract
 	const "**"
 	
 	def op_equal_postcondition(value, result)
+		assert_equal(row_size, value.row_size, generic_postcondition_failure("==", result))
+		assert_equal(column_size, value.column_size, generic_postcondition_failure("==", result))
 		assert_equal(
 			zip(value).all? {|x,y| x == y}, result,
 			generic_postcondition_failure("==", result)
@@ -567,9 +569,10 @@ module MatrixContract
 	const "determinant"
 	
 	def minor_precondition(*args)
-		assert( args.size == 2 || args.size == 4,
-			"Wrong number of args to minor. \n" \
-			"Requires: 2 or 4, Provided: #{args.size}"
+		assert( (args.size == 2 && args.all? {|x| x.is_a?(Range)}) ||
+			(args.size == 4 && args.all? {|y| y % 1 == 0}),
+			"Wrong number/types of args to minor. \n" \
+			"Requires: 2 ranges or 4 integers, Provided: #{args.size}"
 		)
 	end
 	
@@ -590,8 +593,7 @@ module MatrixContract
 			generic_postcondition_failure("minor", result)
 		)
 	end
-	
-	require_operand_types "minor", Numeric, Range
+
 	const "minor"
 	
 	def rank_postcondition(result)
@@ -602,7 +604,7 @@ module MatrixContract
 		nonzero_rows = value.row_vectors.count{|x| x.any?{|y| y != 0} }
 		
 		assert_equal(
-			[row_size, column_size, nonzero_rows].min,
+			[column_size, nonzero_rows].min,
 			result,
 			generic_postcondition_failure("rank", result)
 		)
@@ -611,7 +613,8 @@ module MatrixContract
 	const "rank"
 	
 	def round_postcondition(value, result)
-		assert_equal(count, result.count, generic_postcondition_failure("round", result))
+		assert_equal(row_size, result.row_size, generic_postcondition_failure("round", result))
+		assert_equal(column_size, result.row_size, generic_postcondition_failure("round", result))
 		assert(
 			zip(result).all?{|x, y| x.round(value) == y},
 			generic_postcondition_failure("round", result)
@@ -624,7 +627,7 @@ module MatrixContract
 	
 	def trace_postcondition(result)
 		assert_equal(
-			each_with_index.select{|x,i,j| i==j}.collect{|x| x[0]}.reduce(:+),
+			each(:diagonal).reduce(:+),
 			result,
 			generic_postcondition_failure("trace", result)
 		)
@@ -636,7 +639,7 @@ module MatrixContract
 	def transpose_postconiditon(result)
 		assert(
 			each_with_index.all?{|x,i,j| x == result[j,i]},
-			generic_postcondition_failure("trace", result)
+			generic_postcondition_failure("transpose", result)
 		)
 	end
 	
