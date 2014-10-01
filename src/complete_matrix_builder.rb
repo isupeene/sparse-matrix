@@ -36,7 +36,11 @@ class CompleteMatrixBuilder
 		other.kind_of?(MatrixBuilderContract) &&
 		row_size == other.row_size &&
 		column_size == other.column_size &&
-		row_size.times{|i| column_size.times{|j| self[i, j] = other[i, j] }}
+		row_size.times.all? { |i|
+			column_size.times.all? { |j|
+				self[i, j] == other[i, j]
+			}
+		}
 	end
 
 	include MatrixBuilderContract

@@ -79,6 +79,27 @@ module MatrixBuilderContract
 
 	require_argument_types "[]=", [Integer], [Integer], [Numeric]
 
+	############
+	# Equality #
+	############
+
+	def op_equal_postcondition(value, result)
+		assert_equal(
+			value.kind_of?(MatrixBuilderContract) &&
+			row_size == value.row_size &&
+			column_size == value.column_size &&
+			row_size.times.all? { |i|
+				column_size.times.all? { |j|
+					self[i, j] == value[i, j]
+				}
+			},
+			result,
+			generic_postcondition_failure(:==, result, value)
+		)
+	end
+
+	const "=="
+
 	##############
 	# Conversion #
 	##############
