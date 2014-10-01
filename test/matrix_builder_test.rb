@@ -7,6 +7,8 @@ module MatrixBuilderTestBase
 	def setup
 		@b1 = builder_factory.new(3, 4)
 		@b2 = builder_factory.new(0, 0)
+		@b3 = builder_factory.new(3, 4)
+		@b4 = builder_factory.new(3, 4)
 	end
 
 	def test_size
@@ -32,6 +34,25 @@ module MatrixBuilderTestBase
 		)
 
 		assert(@b2.to_mat.empty?)
+	end
+
+	def test_equality
+		@b4[0, 0] = 5
+		assert(@b1 != @b2 && !(@b1 == @b2))
+		assert(@b1 == @b3 && !(@b1 != @b3))
+		assert(@b1 != @b4 && !(@b1 == @b4))
+
+		assert(@b2 != @b1 && !(@b2 == @b1))
+		assert(@b2 != @b3 && !(@b2 == @b3))
+		assert(@b2 != @b4 && !(@b2 == @b4))
+
+		assert(@b3 == @b1 && !(@b3 != @b1))
+		assert(@b3 != @b2 && !(@b3 == @b2))
+		assert(@b3 != @b4 && !(@b3 == @b4))
+
+		assert(@b4 != @b1 && !(@b4 == @b1))
+		assert(@b4 != @b2 && !(@b4 == @b2))
+		assert(@b4 != @b3 && !(@b4 == @b3))
 	end
 end
 
