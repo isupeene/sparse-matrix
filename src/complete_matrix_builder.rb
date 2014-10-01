@@ -2,6 +2,7 @@ require_relative 'matrix'
 require_relative 'contracts/matrix_builder_contract'
 
 class CompleteMatrixBuilder
+	include Enumerable
 
 	def initialize(row_size, column_size)
 		@row_size = row_size
@@ -36,12 +37,15 @@ class CompleteMatrixBuilder
 		other.kind_of?(MatrixBuilderContract) &&
 		row_size == other.row_size &&
 		column_size == other.column_size &&
-		row_size.times.all? { |i|
-			column_size.times.all? { |j|
-				self[i, j] == other[i, j]
-			}
-		}
+		zip(other).all?{ |x, y| x == y }
 	end
+
+	def each_with_index
+		return to_enum(:each_with_index) unless block_given?
+		row_size.times{ |i| column_size.times{ |j| yield self[i, j], i, j }}
+	end
+
+	alias :each :each_with_index
 
 	include MatrixBuilderContract
 end

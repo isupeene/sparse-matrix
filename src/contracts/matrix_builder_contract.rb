@@ -7,6 +7,7 @@ module MatrixBuilderContract
 	include Test::Unit::Assertions
 
 	def invariant
+		is_a?(Enumerable)
 		# TODO: class invariant
 	end
 
@@ -88,11 +89,7 @@ module MatrixBuilderContract
 			value.kind_of?(MatrixBuilderContract) &&
 			row_size == value.row_size &&
 			column_size == value.column_size &&
-			row_size.times.all? { |i|
-				column_size.times.all? { |j|
-					self[i, j] == value[i, j]
-				}
-			},
+			zip(value).all?{ |x, y| x == y },
 			result,
 			generic_postcondition_failure(:==, result, value)
 		)

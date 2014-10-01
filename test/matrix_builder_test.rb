@@ -17,12 +17,8 @@ module MatrixBuilderTestBase
 	end
 
 	def test_element_access
-		@b1.row_size.times do |i|
-			@b1.column_size.times do |j|
-				@b1[i, j] = i * j
-				assert_equal(i * j, @b1[i, j])
-			end
-		end
+		@b1.each_with_index { |x, i, j| @b1[i, j] = i * j }
+		assert(@b1.each_with_index.all?{ |x, i, j| @b1[i, j] == i * j })
 	end
 
 	def test_to_mat
