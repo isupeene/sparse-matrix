@@ -9,7 +9,9 @@ module MatrixContract
 	MULT_DIV_TYPE = "Mult_Div"
 	
 	def invariant
-		# TODO: Class invariant
+		assert(row_size >= 0, "Row size is invalid.")
+		assert(column_size >= 0, "Column size is invalid.")
+		assert(count == row_size * column_size, "Number of elements is less than it should be.")
 	end
 
 	####################

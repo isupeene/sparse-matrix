@@ -7,7 +7,8 @@ module VectorContract
 	include Test::Unit::Assertions
 
 	def invariant
-		#TODO
+		assert(size >= 0, "Size is invalid.")
+		assert(count == size, "Number of elements is less than it should be.")
 	end
 
 	####################
