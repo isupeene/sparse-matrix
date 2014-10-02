@@ -119,16 +119,6 @@ module MatrixContract
 		end
 	end
 	
-	def self.require_numeric_arg(method_name)
-		add_precondition_contract(method_name) do |instance, value, *args|
-			assert(
-				value.is_a?(Numeric), 
-				"#{method_name} requires a numeric argument. \n" \
-				"You provided: #{value}"
-			)
-		end
-	end
-	
 	def self.require_same_size_matrix(method_name)
 		add_precondition_contract(method_name) do |instance, matrix2, *args|
 			# Allow vectors
@@ -194,22 +184,6 @@ module MatrixContract
 			)
 		end
 	end
-
-	#########################
-	# Common Error Messages #
-	#########################
-
-	def generic_postcondition_failure(method_name, result, *args)
-		if args.length == 0
-			"#{method_name} returned an incorrect result.\n" \
-			"Returned #{result} for the following matrix:\n" \
-			"#{self}"
-		else
-			"#{method_name} returned an incorrect result.\n" \
-			"Returned #{result} for the following matrix and args:\n" \
-			"Matrix: #{self}; Arguments: #{args}"
-		end
-	end 
 	
 	###########################
 	# Common Helper Functions #
@@ -229,7 +203,6 @@ module MatrixContract
 	end
 	
 	def contract_gaussian_elimination
-		#TODO: Try and remove loops and also maybe give credit as code is adapted from Matrix class' rank function
 		a = to_a
 		last_col = column_size - 1
 		last_row = row_size - 1
@@ -251,7 +224,7 @@ module MatrixContract
 				pivot_row += 1
 			end
 		end
-		return Matrix.rows(a)
+		return self.class.rows(a)
 	end
 	
 	def convert_vector_to_matrix(type, matrix2)
@@ -260,7 +233,7 @@ module MatrixContract
 			if self.row_size > 1 && type == ADD_SUB_TYPE
 				matrix2 = matrix2.transpose
 			elsif self.row_size == 1 && type == MULT_DIV_TYPE
-				
+				matrix2 = matrix2.transpose
 			end
 		end
 		return matrix2
@@ -532,7 +505,7 @@ module MatrixContract
 				end
 			else
 				v, d, v_inv = eigensystem
-				diagonalElements = d.each_with_index.select{|x,i,j| i==j}.collect{|x| x[0]}
+				diagonalElements = d.each(:diagonal).collect{|x| x[0]}
 				assert_equal(
 					v * Matrix.diagonal(*diagonalElements) * v_inv,
 					result,
@@ -542,7 +515,7 @@ module MatrixContract
 		end
 	end
 	
-	require_numeric_arg "**"
+	require_operand_types "**", Numeric
 	require_square "**"
 	return_matrix "**"
 	const "**"
@@ -618,6 +591,7 @@ module MatrixContract
 		)
 	end
 
+	return_matrix "minor"
 	const "minor"
 	
 	def rank_postcondition(result)
@@ -667,6 +641,7 @@ module MatrixContract
 		)
 	end
 	
+	return_matrix "transpose"
 	const "transpose"
 	
 	##################
