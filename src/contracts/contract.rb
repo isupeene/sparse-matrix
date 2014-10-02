@@ -184,8 +184,8 @@ module Contract
 	end
 
 	def satisfies_type_restriction?(value, type)
-		if type.kind_of?(Contract)
-			return value.class.include?(type)
+		if type.is_a?(Module)
+			return value.kind_of?(type)
 		else
 			return value.is_a?(type)
 		end
@@ -208,6 +208,7 @@ module Contract
 		add_precondition_contract(method_name) do |instance, *args|
 			args.each.with_index do |arg, i|
 				assert(
+					types.empty? ||
 					types[i].any? { |type|
 						satisfies_type_restriction?(arg, type)
 					},

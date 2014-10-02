@@ -24,7 +24,7 @@
 # Modified by Isaac Supeene, Sept. 2014
 
 require 'test/unit'
-require 'matrix'
+require_relative '../src/matrix'
 require_relative '../src/contracts/matrix_contract'
 
 module MatrixTestBase
@@ -486,10 +486,6 @@ module MatrixTestBase
     end
     assert_equal(1, s1 ** o)
   end
-end
-
-class Matrix
-	include MatrixContract
 end
 
 class MatrixTest < Test::Unit::TestCase
