@@ -7,7 +7,10 @@ module VectorContract
 	include Test::Unit::Assertions
 
 	def invariant
-		#TODO
+		assert(size >= 0, "Size is invalid.")
+		assert(count == size, "Number of elements is less than it should be.")
+		assert(all?{ |x| x.is_a?(Numeric) }, "Non-number elements present in vector.")
+		
 	end
 
 	####################
@@ -23,22 +26,6 @@ module VectorContract
 			)
 		end
 	end
-
-	#########################
-	# Common Error Messages #
-	#########################
-
-	def generic_postcondition_failure(method_name, result, *args)
-		if args.length == 0
-			"#{method_name} returned an incorrect result.\n" \
-			"Returned #{result} for the following vector:\n" \
-			"#{self}"
-		else
-			"#{method_name} returned an incorrect result.\n" \
-			"Returned #{result} for the following vector and args:\n" \
-			"Vector: #{self}; Arguments: #{args}"
-		end
-	end 
 
 	##########
 	# Access #
