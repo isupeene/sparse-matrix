@@ -18,6 +18,9 @@ module Contract
 		add_contract_evaluation_methods(type)
 	end
 
+	# Adds the contract evaluation guards to the target class,
+	# which is necessary for avoiding deep recursion when
+	# evaluating contracts.
 	def add_contract_evaluation_methods(type)
 		class << type
 			attr_accessor :evaluating_contract
@@ -35,6 +38,8 @@ module Contract
 		end
 	end
 
+	# Decorates all instance methods of the target type with
+	# the class invariant.
 	def require_class_invariant(type)
 		type.instance_methods.each do |symbol|
 			method = type.instance_method(symbol)
@@ -48,6 +53,8 @@ module Contract
 		end
 	end
 
+	# Identifies all precondition methods in the target type,
+	# and decorates the appropriate methods with them.
 	def require_preconditions(type)
 		override_matching_instance_methods(type, PRECONDITION_SUFFIX) \
 		do |instance, contract, method, *args, &block|
@@ -58,6 +65,8 @@ module Contract
 		end
 	end
 
+	# Identifies all postcondition methods in the target type,
+	# and decorates the appropriate methods with them.
 	def require_postconditions(type)
 		override_matching_instance_methods(type, POSTCONDITION_SUFFIX) \
 		do |instance, contract, method, *args, &block|
@@ -68,7 +77,9 @@ module Contract
 			result
 		end
 	end
-
+	
+	# Identifies all method invariants in the target type,
+	# and decorates the appropriate methods with them.
 	def require_method_invariants(type)
 		override_matching_instance_methods(type, INVARIANT_SUFFIX) \
 		do |instance, contract, method, *args, &block|
@@ -97,6 +108,9 @@ module Contract
 		end
 	end
 
+	# Identifies instance methods matching the specified pattern,
+	# and replaces them with the code in the specified block.
+	# The original method will be passed to the override block as a block.
 	def override_matching_instance_methods(type, primary_suffix, &override)
 		["", "?", "!", "="].each do |secondary_suffix|
 			matching_instance_methods(
@@ -114,6 +128,8 @@ module Contract
 		end
 	end
 
+	# Yields a sequence of instance methods in the target type
+	# matching the specified pattern.
 	def matching_instance_methods(type, contract_suffix)
 		type.instance_methods.select {
 			|m| m.to_s.end_with?(contract_suffix)
@@ -129,6 +145,8 @@ module Contract
 	# define keyword-style contracts for its own use.
 	# An example of this, 'const', is defined below.
 
+	# Adds the specified block as a method invariant for the
+	# specified method.
 	def add_invariant_contract(method_name, &block)
 		invariant_method_name = invariant_name(method_name)
 
@@ -146,18 +164,26 @@ module Contract
 		end
 	end
 
+	# Adds the specified block as a precondition for the
+	# specified method.
 	def add_precondition_contract(method_name, &block)
 		add_pre_or_postcondition_contract(
 			method_name, precondition_name(method_name), &block
 		)
 	end
 
+	# Adds the specified block as a postcondition for the
+	# specified method.
 	def add_postcondition_contract(method_name, &block)
 		add_pre_or_postcondition_contract(
 			method_name, postcondition_name(method_name), &block
 		)
 	end
 
+	# Factors out the commonalities between adding pre- and postconditions.
+	# Don't get confused because the block is always being called before
+	# the original method - the original method is just another contract,
+	# not the actual function under contract.
 	def add_pre_or_postcondition_contract(method_name, contract_name, &block)
 		if method_defined?(contract_name)
 			original_method = instance_method(contract_name)
@@ -189,6 +215,8 @@ module Contract
 		end
 	end
 
+	# Adds a method invariant specifying that the instance is not
+	# changed by the execution of a function.
 	def const(method_name)
 		add_invariant_contract(method_name) do |instance, *args, &block|
 			old_value = instance.clone
@@ -201,6 +229,7 @@ module Contract
 		end
 	end
 
+	# Checks to make sure that the value is of the specified type.
 	def satisfies_type_restriction?(value, type)
 		if type.is_a?(Module)
 			return value.kind_of?(type)
@@ -209,6 +238,9 @@ module Contract
 		end
 	end
 
+	# Ensures that the specified operation can be executed
+	# between the two specified values using coercion.
+	#
 	# TODO: It's probably more elegant and idiomatic to pass
 	# symbols around, and call to_s on them when necessary,
 	# rather than passing strings around and calling to_sym.
@@ -221,6 +253,10 @@ module Contract
 		end
 	end
 
+	# Adds a precondition to the specified method requiring that
+	# the args are of the specified types.  An array of types (or
+	# preferably, contracts) are specified for each type.  An empty
+	# array indicates no type restrictions.
 	def require_argument_types(method_name, *types)
 		add_precondition_contract(method_name) do |instance, *args|
 			args.each.with_index do |arg, i|
@@ -238,6 +274,10 @@ module Contract
 		end
 	end
 
+	# Like require_argument_types, except only a single array of types
+	# (for the single operand) is specified, and if the type does not
+	# satisfy the conditions, it will still pass if the operation will
+	# succeed using coercion.
 	def require_operand_types(op_name, *types)
 		add_precondition_contract(op_name) do |instance, operand|
 			assert(
@@ -253,6 +293,7 @@ module Contract
 		end
 	end
 
+	# Checks to see if a value can be cloned in a useful way.
 	def cloneable(value)
 		begin
 			return value.clone == value
@@ -261,6 +302,8 @@ module Contract
 		end
 	end
 
+	# Checks all args to see if they are clonable, and
+	# returns the cloneable args alongside the cloned args.
 	def clone_if_possible(args, arg_indices)
 		cloneable_args = arg_indices
 			.map{ |i| args[i] }
@@ -269,6 +312,9 @@ module Contract
 		return cloneable_args, cloneable_args.map{ |x| x.clone }
 	end
 
+	# Adds a method invariant to the specified method that ensures that
+	# the arguments at all the specified indices are not altered by
+	# execution of the method.
 	def const_arguments(method_name, *arg_indices)
 		add_invariant_contract(method_name) do |instance, *args, &block|
 			arg_indices = arg_indices.empty? ?

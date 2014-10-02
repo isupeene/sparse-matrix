@@ -17,6 +17,8 @@ module VectorContract
 	# Common Contracts #
 	####################
 
+	# Adds a postcondition to the specified method requiring that the
+	# method returns an object satisfying the VectorContract.
 	def self.return_vector(method_name)
 		add_postcondition_contract(method_name) do |instance, *args, result|
 			assert(
@@ -63,7 +65,7 @@ module VectorContract
 
 	def op_multiply_precondition(value)
 		if value.class.include?(MatrixContract)
-			# TODO: covector.transpose.op_multiply_precondition(value)
+			covector.transpose.op_multiply_precondition(value)
 		elsif value.class.include?(VectorContract)
 			assert_equal(
 				size,
@@ -89,7 +91,7 @@ module VectorContract
 				"vector: #{self}, scalar: #{value}, result: #{result}"
 			)
 		elsif value.class.include?(MatrixContract)
-			# TODO: covector.transpose.op_multiply_postcondition(value, result)
+			covector.transpose.op_multiply_postcondition(value, result)
 		elsif value.class.include?(VectorContract)
 			inner_product_postcondition(value, result)
 		else
@@ -138,7 +140,7 @@ module VectorContract
 				"vector 1: #{self}, vector 2: #{value}"
 			)
 		elsif value.class.include?(MatrixContract)
-			# TODO: Matrix.column_vector(self).op_add_precondition(value)
+			Matrix.column_vector(self).op_add_precondition(value)
 		end
 	end
 
