@@ -7,7 +7,8 @@ module MatrixContract
 
 	ADD_SUB_TYPE = "Add_Sub"
 	MULT_DIV_TYPE = "Mult_Div"
-	
+
+	# The class invariant.	
 	def invariant
 		assert(row_size >= 0, "Row size is invalid.")
 		assert(column_size >= 0, "Column size is invalid.")
@@ -40,6 +41,7 @@ module MatrixContract
 	# Common Contracts #
 	####################
 	
+	# Common postcondition for addition and subtraction.
 	def self.add_sub_postcondition(method_name, &numBlock)
 		add_postcondition_contract(method_name) do |instance, matrix2, result, *args|
 			matrix2 = instance.convert_vector_to_matrix(ADD_SUB_TYPE, matrix2)
@@ -68,6 +70,7 @@ module MatrixContract
 		end
 	end
 	
+	# Common postcondition for multiplication and division.
 	def self.mult_div_postcondition(method_name, &numBlock)
 		add_postcondition_contract(method_name) do |instance, value, result, *args|
 			value = instance.convert_vector_to_matrix(MULT_DIV_TYPE, value)
@@ -99,6 +102,8 @@ module MatrixContract
 		end
 	end
 	
+	# Adds a precondition to the specified method requiring that the
+	# argument is multipliable by a matrix.
 	def self.require_multipliable_arg(method_name)
 		add_precondition_contract(method_name) do |instance, value, *args|
 			matrix2 = instance.convert_vector_to_matrix(MULT_DIV_TYPE, value)
@@ -118,7 +123,9 @@ module MatrixContract
 
 		end
 	end
-	
+
+	# Adds a precondition to the specified method requiring that the
+	# argument is a matrix of the same dimensionality as the current instance.	
 	def self.require_same_size_matrix(method_name)
 		add_precondition_contract(method_name) do |instance, matrix2, *args|
 			# Allow vectors
@@ -139,6 +146,8 @@ module MatrixContract
 		end
 	end
 
+	# Adds a precondition to the specified method requiring that the
+	# current instance is a square matrix.
 	def self.require_square(method_name)
 		add_precondition_contract(method_name) do |instance, *args|
 			assert(
@@ -151,6 +160,8 @@ module MatrixContract
 		end
 	end
 
+	# Adds a precondition to the specified method requiring that the
+	# current instance is a real matrix.
 	def self.require_real(method_name)
 		add_precondition_contract(method_name) do |instance, *args|
 			assert(
@@ -163,6 +174,8 @@ module MatrixContract
 		end
 	end
 	
+	# Adds a precondition to the specified method requiring that the
+	# current instance is a regular matrix.
 	def self.require_regular(method_name)
 		add_precondition_contract(method_name) do |instance, *args|
 			assert(
@@ -175,6 +188,8 @@ module MatrixContract
 		end
 	end
 	
+	# Adds a postcondition to the specified method requiring that the
+	# method returns an object satisfying the MatrixContract.
 	def self.return_matrix(method_name)
 		add_postcondition_contract(method_name) do |instance, *args, result|
 			assert(
@@ -189,10 +204,13 @@ module MatrixContract
 	# Common Helper Functions #
 	###########################
 	
+	# Checks if the value satisfies the MatrixContract.
 	def is_matrix?(value)
 		value.class.include?(MatrixContract)
 	end
 	
+	# Ensures that the result is equal to this matrix multiplied by
+	# the specified value.
 	def contract_matrix_multiply(oper, value, result)
 		assert( 
 			result.each_with_index.all? do |val, rowId, colId|
@@ -202,6 +220,8 @@ module MatrixContract
 		)
 	end
 	
+	# Does gaussian elimination of the current instance and
+	# returns the result.
 	def contract_gaussian_elimination
 		a = to_a
 		last_col = column_size - 1
@@ -224,9 +244,12 @@ module MatrixContract
 				pivot_row += 1
 			end
 		end
-		return self.class.rows(a)
+		# Doesn't matter if Matrix is not the class
+		# under contract.
+		return Matrix.rows(a)
 	end
 	
+	# Converts the specified vector to matrix if possible.
 	def convert_vector_to_matrix(type, matrix2)
 		if matrix2.respond_to?(:covector)
 			matrix2 = matrix2.covector
@@ -239,6 +262,8 @@ module MatrixContract
 		return matrix2
 	end
 	
+	# Asserts that the result of multiplying a matrix by an empty
+	# matrix is correct.
 	def empty_matrix_mult_div(oper, matrix2, result)
 		if empty? && matrix2.empty?
 			assert_equal(

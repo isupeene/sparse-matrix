@@ -17,6 +17,8 @@ module VectorContract
 	# Common Contracts #
 	####################
 
+	# Adds a postcondition to the specified method requiring that the
+	# method returns an object satisfying the VectorContract.
 	def self.return_vector(method_name)
 		add_postcondition_contract(method_name) do |instance, *args, result|
 			assert(
