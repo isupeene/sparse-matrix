@@ -13,6 +13,7 @@ module Contract
 		require_preconditions(type)
 		require_postconditions(type)
 		require_class_invariant(type)
+		create_generic_postcondition_failure(type)
 
 		add_contract_evaluation_methods(type)
 	end
@@ -170,6 +171,23 @@ module Contract
 			end
 		end
 	end
+	
+	def create_generic_postcondition_failure(type)
+		name = "generic_postcondition_failure"
+		unless type.method_defined?(name)
+			type.send(:define_method, name) do |method_name, result, *args|
+				if args.length == 0
+					"#{method_name} returned an incorrect result.\n" \
+					"Returned #{result} for the following matrix:\n" \
+					"#{self}"
+				else
+					"#{method_name} returned an incorrect result.\n" \
+					"Returned #{result} for the following matrix and args:\n" \
+					"Matrix: #{self}; Arguments: #{args}"
+				end
+			end
+		end
+	end
 
 	def const(method_name)
 		add_invariant_contract(method_name) do |instance, *args, &block|
@@ -199,7 +217,6 @@ module Contract
 			op.to_sym.to_proc.call(*value.coerce(instance))
 			return true
 		rescue Exception => ex
-			puts ex
 			return false
 		end
 	end
@@ -271,6 +288,5 @@ module Contract
 			)
 		end
 	end
-	
 end
 

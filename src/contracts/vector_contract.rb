@@ -23,22 +23,6 @@ module VectorContract
 			)
 		end
 	end
-	
-	#########################
-	# Common Error Messages #
-	#########################
-
-	def generic_postcondition_failure(method_name, result, *args)
-		if args.length == 0
-			"#{method_name} returned an incorrect result.\n" \
-			"Returned #{result} for the following matrix:\n" \
-			"#{self}"
-		else
-			"#{method_name} returned an incorrect result.\n" \
-			"Returned #{result} for the following matrix and args:\n" \
-			"Matrix: #{self}; Arguments: #{args}"
-		end
-	end 
 
 	##########
 	# Access #
