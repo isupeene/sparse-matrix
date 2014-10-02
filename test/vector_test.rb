@@ -24,7 +24,7 @@
 # Modified by Isaac Supeene, Sept. 2014
 
 require 'test/unit'
-require 'matrix'
+require_relative '../src/matrix'
 require_relative '../src/contracts/vector_contract'
 require_relative '../src/contracts/matrix_contract'
 
@@ -171,10 +171,6 @@ end
 
 class Vector
 	include VectorContract
-end
-
-class Matrix
-	include MatrixContract
 end
 
 class VectorTest < Test::Unit::TestCase
