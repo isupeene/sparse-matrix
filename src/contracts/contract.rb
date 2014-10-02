@@ -178,12 +178,12 @@ module Contract
 			type.send(:define_method, name) do |method_name, result, *args|
 				if args.length == 0
 					"#{method_name} returned an incorrect result.\n" \
-					"Returned #{result} for the following matrix:\n" \
+					"Returned #{result} for the following #{type.class}:\n" \
 					"#{self}"
 				else
 					"#{method_name} returned an incorrect result.\n" \
-					"Returned #{result} for the following matrix and args:\n" \
-					"Matrix: #{self}; Arguments: #{args}"
+					"Returned #{result} for the following #{type.class} and args:\n" \
+					"#{type.class}: #{self}; Arguments: #{args}"
 				end
 			end
 		end
@@ -216,7 +216,7 @@ module Contract
 		begin
 			op.to_sym.to_proc.call(*value.coerce(instance))
 			return true
-		rescue Exception => ex
+		rescue
 			return false
 		end
 	end
