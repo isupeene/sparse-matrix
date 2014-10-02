@@ -34,7 +34,11 @@ module MatrixContract
 					)
 				end
 			else
-				coercion = matrix2.coerce(instance)
+				begin
+					coercion = matrix2.coerce(instance)
+				rescue
+					puts matrix2
+				end
 				assert_equal(
 					coercion[0].send(method_name, coercion[1]),
 					result,
@@ -92,16 +96,6 @@ module MatrixContract
 					end				
 			end
 
-		end
-	end
-	
-	def self.require_numeric_arg(method_name)
-		add_precondition_contract(method_name) do |instance, value, *args|
-			assert(
-				value.is_a?(Numeric), 
-				"#{method_name} requires a numeric argument. \n" \
-				"You provided: #{value}"
-			)
 		end
 	end
 	
@@ -170,7 +164,7 @@ module MatrixContract
 			)
 		end
 	end
-
+	
 	#########################
 	# Common Error Messages #
 	#########################
@@ -205,7 +199,6 @@ module MatrixContract
 	end
 	
 	def contract_gaussian_elimination
-		#TODO: Try and remove loops and also maybe give credit as code is adapted from Matrix class' rank function
 		a = to_a
 		last_col = column_size - 1
 		last_row = row_size - 1
@@ -227,7 +220,7 @@ module MatrixContract
 				pivot_row += 1
 			end
 		end
-		return Matrix.rows(a)
+		return self.class.rows(a)
 	end
 	
 	def convert_vector_to_matrix(type, matrix2)
@@ -236,7 +229,7 @@ module MatrixContract
 			if self.row_size > 1 && type == ADD_SUB_TYPE
 				matrix2 = matrix2.transpose
 			elsif self.row_size == 1 && type == MULT_DIV_TYPE
-				
+				matrix2 = matrix2.transpose
 			end
 		end
 		return matrix2
@@ -508,7 +501,7 @@ module MatrixContract
 				end
 			else
 				v, d, v_inv = eigensystem
-				diagonalElements = d.each_with_index.select{|x,i,j| i==j}.collect{|x| x[0]}
+				diagonalElements = d.each(:diagonal).collect{|x| x[0]}
 				assert_equal(
 					v * Matrix.diagonal(*diagonalElements) * v_inv,
 					result,
@@ -518,7 +511,7 @@ module MatrixContract
 		end
 	end
 	
-	require_numeric_arg "**"
+	require_operand_types "**", Numeric
 	require_square "**"
 	return_matrix "**"
 	const "**"
