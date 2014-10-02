@@ -594,6 +594,7 @@ module MatrixContract
 		)
 	end
 
+	return_matrix "minor"
 	const "minor"
 	
 	def rank_postcondition(result)
@@ -643,6 +644,7 @@ module MatrixContract
 		)
 	end
 	
+	return_matrix "transpose"
 	const "transpose"
 	
 	##################
