@@ -1,3 +1,22 @@
+Group 4: Isaac Supeene (isupeene) & Braeden Soetaert (bsoetaer)
+
+We are using Ruby version 1.9.3. Our design is to have a matrix factory builder that builds up matrices.
+The matrix factory builder will be able to build different types of matrices that have different implementations
+but all the matrices hold the same MatrixContract. We also have a VectorContract which will be the contract for 
+vectors which are basically matrices with one size dimension being equal to 1. The matrices we are going to 
+implement have the same functional interface as Ruby's Matrix library and provide the same functionality but for sparse
+and tridiagonal matrices. As with the Ruby Matrix class, our matrices themselves are immutable but the matrices
+can be built up through the MatrixBuilder and elements can be added to a Matrix through it.
+
+Our contracts wrap the matrix methods of a class when the contract is included into the class. The contracts all
+do this through methods that are present in the Contract module. The Contract module does this by redefining the
+class methods with the contracts added in to surround the original method. All contract modules extend the Contract
+module and define the contracts for a given type. 
+
+###############################
+# Answers to design questions #
+###############################
+
 * What is a sparse matrix and what features should it possess?
 
 Matrix where most elements are 0.  Compact representation, fast operations.
@@ -18,7 +37,7 @@ and finding that it's not fast enough for their needs.
 If they can simply swap in our library and get the increase in performance we need, that will be a success.
 
 
-*Who is likely to be the user of a sparse matrix package? What features are they likely to demand?
+* Who is likely to be the user of a sparse matrix package? What features are they likely to demand?
 
 Engineers, primarily.  Also professors and financial analysts.
 Useful features will include:
@@ -29,12 +48,12 @@ Useful features will include:
 	Eigenvalues and Eigenvectors
 
 
-*What is a tri-diagonal matrix?
+* What is a tri-diagonal matrix?
 
 A matrix where, for all non-0 entries A(i, j), |i – j| <= 1
 
 
-*What is the relationship between a tri-diagonal matrix and a generic sparse matrix?
+* What is the relationship between a tri-diagonal matrix and a generic sparse matrix?
 
 Generally speaking, a tri-diagonal matrix is a sparse matrix,
 but a generic sparse matrix is not necessarily a tridiagonal matrix.
@@ -47,7 +66,7 @@ In other words, the contract of a mutable tri-diagonal matrix
 is not compatible with that of a mutable generic sparse matrix.
 
 
-*Are tri-diagonal matrices important? And should they impact your design? If so, how?
+* Are tri-diagonal matrices important? And should they impact your design? If so, how?
 
 They are important, because some functions can be implemented more efficiently on tri-diagonal matrices.
 
@@ -55,7 +74,7 @@ We should try to utilize a more efficient representation of the matrix wherever 
 perhaps by using a tri-diagonal representation when the matrix is tridiagonal, and another representation otherwise.
 
 
-*What is a good data representation for a sparse matrix?
+* What is a good data representation for a sparse matrix?
 
 Coordinate, Compressed Row, and Compressed Column are good representations for a sparse matrix,
 but are pretty bad when it comes to adding new elements.
@@ -65,7 +84,7 @@ then the representation could be switched to one of the aforementioned when the 
 Tridiagonal matrices can be implemented as three arrays representing the tri-diagonal elements.
 
 
-*Assume that you have a customer for your sparse matrix package. The customer states that their primary requirements as: for an N x N matrix with m non-zero entries.  Storage should be ~O(km), where k << N.  Adding the m+1 value into the matrix should have an execution time of ~O(p) where the execution time of all method calls in standard Ruby container classes is considered to have a unit value and p << m ideally p = 1.  In this scenario, what is a good data representation for a sparse matrix?
+* Assume that you have a customer for your sparse matrix package. The customer states that their primary requirements as: for an N x N matrix with m non-zero entries.  Storage should be ~O(km), where k << N.  Adding the m+1 value into the matrix should have an execution time of ~O(p) where the execution time of all method calls in standard Ruby container classes is considered to have a unit value and p << m ideally p = 1.  In this scenario, what is a good data representation for a sparse matrix?
 
 A hash could be a good representation in this case.
 Alternatively, we could use coordinate format, and use a binary search to decide where to put the new element.
@@ -74,7 +93,7 @@ Aside from taking less space, there's no real benefit to using coordinate format
 it would be better to use the hash for insertions,
 then change to compressed row or compressed column when the matrix is frozen.
 
-*Design Patterns are common tricks which normally enshrine good practice.  Explain the design patterns: Delegate and Abstract Factory
+* Design Patterns are common tricks which normally enshrine good practice.  Explain the design patterns: Delegate and Abstract Factory
 
 Delegate: Where an object, when asked to perform a task, delegates the task to another object.
 
@@ -83,7 +102,8 @@ A factory will be acquired from the abstract factory (which can be implemented a
 and provided to the code using the class, which can call the factory to get an instance.
 
 
-*Explain how you would approach implementing these two patterns in Ruby
+* Explain how you would approach implementing these two patterns in Ruby
+
 The delegate pattern can be implemented by holding the object to be delegated to in an instance variable.
 The few methods the delegator needs to actively do something with can be implemented in the delegator class.
 Otherwise, the delegator can implement method_missing and simply forward any other messages to the delegate class.
@@ -100,7 +120,7 @@ it should return something which satisfies a “MatrixFactoryContract”,
 and any matrix provided by the factory should satisfy the “MatrixContract”
 
 
-*Are these patterns applicable to this problem? Explain your answer! (HINT: The answer is yes)
+* Are these patterns applicable to this problem? Explain your answer! (HINT: The answer is yes)
 
 Yes.
 
@@ -127,7 +147,7 @@ This can be accomplished by having a mutable MatrixBuilder, which will eventuall
 An abstract builder factory might still be a possibility (TODO: consider this possibility and expand on it).
 
 
-*What implementation approach are you using (reuse class, modify class, inherit from class, compose with class, build new standalone class); justify your selection.
+* What implementation approach are you using (reuse class, modify class, inherit from class, compose with class, build new standalone class); justify your selection.
 
 Obviously reusing the built-in Matrix class won't do, as it has no provisions for sparsity.
 Modifying the built-in Matrix class would be more trouble than it's worth,
@@ -143,14 +163,14 @@ For a complete matrix implementation, if we choose to have one as part of our li
 composing the built-in matrix class seems most suitable.
 
 
-*Is iteration a good technique for sparse matrix manipulation? Is “custom” iteration required for this problem?
+* Is iteration a good technique for sparse matrix manipulation? Is “custom” iteration required for this problem?
 
 There aren't too many operations on matrices that involve sweeping through every single element of the matrix in order.  However, for cases where that's useful, a useful addition would be only to iterate over the non-zero elements (similar to the way the built-in matrix class's 'each' and 'each_with_index' methods offer ways to specify which elements will be iterated over).
 
 Iterating the rows or columns could also be useful, or iterating the elements row-wise or column-wise.
 
 
-*What exceptions can occur during the processing of sparse matrices? And how should the system handle them?
+* What exceptions can occur during the processing of sparse matrices? And how should the system handle them?
 
 Errors if the matrix operation only works on square matrices and the matrix isn’t square.
 Error if a matrix is singular so it is not invertible and an inverse is requested.
@@ -164,7 +184,7 @@ or our process is killed, and there's nothing that our puny process can do about
 So we use contracts to prevent vexing exceptions before they occur, and pay no mind to fatal exceptions.
 
 
-*What information does the system require to create a sparse matrix object? Remember you are building for a set of unknown customers – what will they want?
+* What information does the system require to create a sparse matrix object? Remember you are building for a set of unknown customers – what will they want?
 
 For a mutable matrix, we need to know the dimensions of the matrix to create it.
 For an immutable matrix, we also need to know the values of all the elements.
@@ -181,7 +201,7 @@ Another option could be to pass the factory a coordinate-format (or compressed r
 that it uses to place the non-zero elements.
 
 
-*What are the important quality characteristics of a sparse matrix package? Reusability? Efficiency? Efficiency of what?
+* What are the important quality characteristics of a sparse matrix package? Reusability? Efficiency? Efficiency of what?
 
 The sparse matrix package should definitely be more efficient for sparse matrices than the built-in matrix class.
 It should be fast enough to create workable prototype code working with large sparse matrices.
@@ -198,6 +218,6 @@ The sparse matrix package should be compatible with the built-in matrix class to
 switching to our software.  From a business perspective, this can make our software much more attractive to customers.
 
 
-*How do we generalize 2-D matrices to n-D matrices, where n > 2 – um, sounds like an extensible design?
+* How do we generalize 2-D matrices to n-D matrices, where n > 2 – um, sounds like an extensible design?
 
 ???
