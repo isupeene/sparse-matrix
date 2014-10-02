@@ -14,6 +14,26 @@ module MatrixContract
 		assert(count == row_size * column_size, "Number of elements is less than it should be.")
 		assert(all?{ |x| x.is_a?(Numeric) }, "Non-number elements present in matrix.")
 		assert(self.transpose.transpose == self, "Matrix modified by transposing it.")
+		m1 = Matrix.build(row_size, column_size) {|i, j| i == j ? 1 : 0}
+		m2 = Matrix.build(row_size, column_size) {|i, j| i == j ? 2 : 0}
+		m3 = Matrix.build(column_size, row_size) {|i, j| i == j ? 3 : 0}
+		m4 = Matrix.build(column_size, row_size) {|i, j| i == j ? 4 : 0}
+		assert_equal(
+			self + m1, m1 + self,
+			"Matrix addition was not commutative."
+		)
+		assert_equal(
+			(self + m1) + m2, self + (m1 + m2),
+			"Matrix addition was not associative."
+		)
+		assert_equal(
+			(self * m3) * m2, self * (m3 * m2),
+			"Matrix multiplication was not associative."
+		)
+		assert_equal(
+			self * (m3 + m4), (self * m3) + (self * m4),
+			"Matrix multiplication was not distributive."
+		)
 	end
 
 	####################
