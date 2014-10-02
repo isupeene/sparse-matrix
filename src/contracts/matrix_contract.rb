@@ -12,6 +12,8 @@ module MatrixContract
 		assert(row_size >= 0, "Row size is invalid.")
 		assert(column_size >= 0, "Column size is invalid.")
 		assert(count == row_size * column_size, "Number of elements is less than it should be.")
+		assert(all?{ |x| x.is_a?(Numeric) }, "Non-number elements present in matrix.")
+		assert(self.transpose.transpose == self, "Matrix modified by transposing it.")
 	end
 
 	####################
