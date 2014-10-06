@@ -1,14 +1,14 @@
 require 'test/unit'
 require_relative '../src/contracts/matrix_builder_contract.rb'
-require_relative '../src/complete_matrix_builder'
+require_relative '../src/builders/complete_matrix_builder'
 
 module MatrixBuilderTestBase
 
 	def setup
-		@b1 = builder_factory.new(3, 4)
-		@b2 = builder_factory.new(0, 0)
-		@b3 = builder_factory.new(3, 4)
-		@b4 = builder_factory.new(3, 4)
+		@b1 = builder_factory.send(:new, 3, 4)
+		@b2 = builder_factory.send(:new, 0, 0)
+		@b3 = builder_factory.send(:new, 3, 4)
+		@b4 = builder_factory.send(:new, 3, 4)
 	end
 
 	def test_size
@@ -53,6 +53,14 @@ module MatrixBuilderTestBase
 end
 
 class CompleteMatrixBuilderTest < Test::Unit::TestCase
+	include MatrixBuilderTestBase
+
+	def builder_factory
+		CompleteMatrixBuilder
+	end
+end
+
+class SparseMatrixBuilderTest < Test::Unit::TestCase
 	include MatrixBuilderTestBase
 
 	def builder_factory

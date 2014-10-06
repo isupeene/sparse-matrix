@@ -25,6 +25,8 @@
 
 require 'test/unit'
 require_relative '../src/matrix'
+require_relative '../src/vector'
+require_relative '../src/builders/sparse_vector_builder'
 require_relative '../src/contracts/vector_contract'
 require_relative '../src/contracts/matrix_contract'
 
@@ -35,6 +37,16 @@ module VectorTestBase
     @v3 = @v1.clone
     @v4 = vector_factory[1.0, 2.0, 3.0]
     @w1 = vector_factory[2,3,4]
+    @c1 = vector_factory[
+      Complex.rect(1, -1),
+      Complex.rect(2, -2),
+      Complex.rect(3, -3)
+    ]
+    @c2 = vector_factory[
+      Complex.rect(1, 1),
+      Complex.rect(2, 2),
+      Complex.rect(3, 3)
+    ]
   end
 
   def test_identity
@@ -110,7 +122,7 @@ module VectorTestBase
   def test_mul
     assert_equal(vector_factory[2,4,6], @v1 * 2)
     assert_equal(Matrix[[1, 4, 9], [2, 8, 18], [3, 12, 27]], @v1 * Matrix[[1,4,9]])
-    assert_raise(Matrix::ErrOperationNotDefined) { @v1 * vector_factory[1,4,9] }
+    assert_equal(20, @v1 * @w1)
     o = Object.new
     def o.coerce(x)
       [1, 1]
@@ -138,6 +150,14 @@ module VectorTestBase
     assert_equal(0, vector_factory[1, 2, 3] - o)
   end
 
+  def test_unary_plus
+    assert_equal(@v1, +@v1)
+  end
+
+  def test_unary_minus
+    assert_equal(@v1, -(-@v1))
+  end
+
   def test_inner_product
     assert_equal(1+4+9, @v1.inner_product(@v1))
   end
@@ -151,11 +171,11 @@ module VectorTestBase
   end
 
   def test_to_s
-    assert_equal("#{vector_factory}[1, 2, 3]", @v1.to_s)
+    assert_equal("#{type_name}[1, 2, 3]", @v1.to_s)
   end
 
   def test_inspect
-    assert_equal("#{vector_factory}[1, 2, 3]", @v1.inspect)
+    assert_equal("#{type_name}[1, 2, 3]", @v1.inspect)
   end
 
   def test_magnitude
@@ -167,10 +187,10 @@ module VectorTestBase
     v = vector_factory[Rational(1,2), 0]
     assert_equal(0.5, v.norm)
   end
-end
 
-class Vector
-	include VectorContract
+  def test_conjugate
+    assert_equal(@c1, @c2.conjugate)
+  end
 end
 
 class VectorTest < Test::Unit::TestCase
@@ -178,6 +198,22 @@ class VectorTest < Test::Unit::TestCase
 
 	def vector_factory
 		Vector
+	end
+
+	def type_name
+		"Vector"
+	end
+end
+
+class SparseVectorTest < Test::Unit::TestCase
+	include VectorTestBase
+
+	def vector_factory
+		SparseVectorBuilder
+	end
+
+	def type_name
+		"SparseVector"
 	end
 end
 

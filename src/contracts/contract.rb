@@ -9,31 +9,22 @@ module Contract
 	# and will be called when that module is included in the target class.
 	# Ensures that all contracts are checked in the target class.
 	def included(type)
-		require_method_invariants(type)
-		require_preconditions(type)
-		require_postconditions(type)
-		require_class_invariant(type)
-		create_generic_postcondition_failure(type)
+#		require_method_invariants(type)
+#		require_preconditions(type)
+#		require_postconditions(type)
+#		require_class_invariant(type)
 
-		add_contract_evaluation_methods(type)
+#		create_generic_postcondition_failure(type)
 	end
 
-	# Adds the contract evaluation guards to the target class,
-	# which is necessary for avoiding deep recursion when
-	# evaluating contracts.
-	def add_contract_evaluation_methods(type)
-		class << type
-			attr_accessor :evaluating_contract
-
-			def evaluate_contract
-				unless self.evaluating_contract
-					self.evaluating_contract = true
-					begin
-						yield
-					ensure
-						self.evaluating_contract = false
-					end
-				end
+	@@evaluating_contract = false
+	def self.evaluate
+		unless @@evaluating_contract
+			begin
+				@@evaluating_contract = true
+				yield
+			ensure
+				@@evaluating_contract = false
 			end
 		end
 	end
@@ -45,9 +36,9 @@ module Contract
 			method = type.instance_method(symbol)
 			
 			type.send(:define_method, symbol) do |*args, &block|
-				type.evaluate_contract{ invariant }
+				Contract.evaluate{ invariant } unless symbol == :initialize
 				result = method.bind(self).call(*args, &block)
-				type.evaluate_contract{ invariant }
+				Contract.evaluate{ invariant }
 				result
 			end
 		end
@@ -58,7 +49,7 @@ module Contract
 	def require_preconditions(type)
 		override_matching_instance_methods(type, PRECONDITION_SUFFIX) \
 		do |instance, contract, method, *args, &block|
-			type.evaluate_contract {
+			Contract.evaluate {
 				contract.bind(instance).call(*args, &block)
 			}
 			method.bind(instance).call(*args, &block)
@@ -71,7 +62,7 @@ module Contract
 		override_matching_instance_methods(type, POSTCONDITION_SUFFIX) \
 		do |instance, contract, method, *args, &block|
 			result = method.bind(instance).call(*args, &block)
-			type.evaluate_contract {
+			Contract.evaluate {
 				contract.bind(instance).call(*args << result, &block)
 			}
 			result
@@ -83,11 +74,11 @@ module Contract
 	def require_method_invariants(type)
 		override_matching_instance_methods(type, INVARIANT_SUFFIX) \
 		do |instance, contract, method, *args, &block|
-			if type.evaluating_contract
+			if @@evaluating_contract
 				method.bind(instance).call(*args, &block)
 			else
 				result = nil
-				type.evaluating_contract = true
+				@@evaluating_contract = true
 				# NOTE: The method invariant cannot be passed the same
 				# block that is passed to the function, since it
 				# needs to be passed this block which evaluates
@@ -96,12 +87,12 @@ module Contract
 				# block arguments to the function under contract.
 				begin
 					contract.bind(instance).call(*args) {
-						type.evaluating_contract = false
+						@@evaluating_contract = false
 						result = method.bind(instance).call(*args, &block)
-						type.evaluating_contract = true
+						@@evaluating_contract = true
 					}
 				ensure
-					type.evaluating_contract = false
+					@@evaluating_contract = false
 				end
 				result
 			end
@@ -204,12 +195,12 @@ module Contract
 			type.send(:define_method, name) do |method_name, result, *args|
 				if args.length == 0
 					"#{method_name} returned an incorrect result.\n" \
-					"Returned #{result} for the following #{type.class}:\n" \
+					"Returned #{result} for the following #{type}:\n" \
 					"#{self}"
 				else
 					"#{method_name} returned an incorrect result.\n" \
-					"Returned #{result} for the following #{type.class} and args:\n" \
-					"#{type.class}: #{self}; Arguments: #{args}"
+					"Returned #{result} for the following #{type} and args:\n" \
+					"#{type}: #{self}; Arguments: #{args}"
 				end
 			end
 		end
