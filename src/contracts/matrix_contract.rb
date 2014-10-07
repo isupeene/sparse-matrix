@@ -1,9 +1,11 @@
 require 'test/unit'
 require_relative 'contract'
+require_relative 'basic_contracts'
 require_relative 'contracts'
 
 module MatrixContract
 	extend Contract
+	extend BasicContracts
 	include Test::Unit::Assertions
 
 	ADD_SUB_TYPE = "Add_Sub"

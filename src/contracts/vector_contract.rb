@@ -1,9 +1,11 @@
 require_relative 'contract'
+require_relative 'basic_contracts'
 require_relative 'contracts'
 require 'matrix'
 
 module VectorContract
 	extend Contract
+	extend BasicContracts
 	include Test::Unit::Assertions
 
 	def invariant
