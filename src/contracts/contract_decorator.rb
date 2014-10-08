@@ -14,6 +14,7 @@ module ContractDecorator
 
 	def initialize_impl(implementation)
 		@implementation = implementation
+		self.enable_contracts = true
 	end
 
 	def initialize(implementation)
@@ -66,7 +67,10 @@ module ContractDecorator
 			}
 			return result
 		else
-			@implementation.send(symbol, *args, &block)
+			@@evaluating_contracts = false
+			result = @implementation.send(symbol, *args, &block)
+			@@evaluating_contracts = true
+			return result
 		end
 	end
 

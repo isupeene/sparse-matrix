@@ -133,7 +133,7 @@ class SparseVectorImpl
 	##############
 
 	def inner_product(v)
-		each_with_index(:non_zero).map{ |x, i| x * v[i] }.reduce(:+)
+		each_with_index(:non_zero).map{ |x, i| x * v[i] }.reduce(0, :+)
 	end
 
 	private
@@ -221,7 +221,7 @@ class SparseVectorImpl
 	end
 
 	def eql?(other)
-		other.is_a?(SparseVector) &&
+		other.is_a?(SparseVectorImpl) &&
 		self.size == other.size &&
 		zip(other).all?{ |x, y| x.eql?(y) }
 	end

@@ -29,8 +29,6 @@ module MatrixContract
 			(self + m1) + m2, self + (m1 + m2),
 			"Matrix addition was not associative."
 		)
-		x = (self * m3) * m2
-		puts("#{self * m3}, #{m3 * m2}") if x.nil?
 		assert_equal(
 			(self * m3) * m2, self * (m3 * m2),
 			"Matrix multiplication was not associative."
