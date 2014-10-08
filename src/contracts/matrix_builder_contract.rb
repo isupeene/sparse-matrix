@@ -4,7 +4,6 @@ require_relative 'matrix_contract'
 require 'test/unit'
 
 module MatrixBuilderContract
-	extend Contract
 	extend BasicContracts
 	include Test::Unit::Assertions
 

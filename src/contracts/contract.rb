@@ -9,12 +9,10 @@ module Contract
 	# and will be called when that module is included in the target class.
 	# Ensures that all contracts are checked in the target class.
 	def included(type)
-#		require_method_invariants(type)
-#		require_preconditions(type)
-#		require_postconditions(type)
-#		require_class_invariant(type)
-
-#		create_generic_postcondition_failure(type)
+		require_method_invariants(type)
+		require_preconditions(type)
+		require_postconditions(type)
+		require_class_invariant(type)
 	end
 
 	@@evaluating_contract = false

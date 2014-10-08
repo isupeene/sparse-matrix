@@ -400,7 +400,7 @@ module MatrixTestBase
     assert(l.lower_triangular?)
     assert(u.upper_triangular?)
     assert(p.permutation?)
-    assert(l * u == p * m)
+    assert_equal(l * u, p * m)
     assert_equal(m.lup.solve([2, 5]), Vector[1, Rational(1,2)])
   end
 

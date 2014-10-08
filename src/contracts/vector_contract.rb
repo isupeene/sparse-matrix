@@ -4,7 +4,6 @@ require_relative 'contracts'
 require 'matrix'
 
 module VectorContract
-	extend Contract
 	extend BasicContracts
 	include Test::Unit::Assertions
 

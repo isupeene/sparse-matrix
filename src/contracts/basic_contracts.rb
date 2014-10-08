@@ -1,6 +1,14 @@
 require_relative 'contract_symbols'
+require 'test/unit'
 
 module BasicContracts
+	include ContractSymbols
+	include Test::Unit::Assertions
+
+	def included(type)
+		create_generic_postcondition_failure(type)
+	end
+
 	# Dynamically add new contracts to the derived module.
 	# This enables a module that extends the Contract module to
 	# define keyword-style contracts for its own use.
