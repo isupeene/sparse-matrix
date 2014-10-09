@@ -14,7 +14,6 @@ module ContractDecorator
 
 	def initialize_impl(implementation)
 		@implementation = implementation
-		self.enable_contracts = true
 	end
 
 	def initialize(implementation)
@@ -33,7 +32,15 @@ module ContractDecorator
 	attr_accessor :implementation
 
 	public
-	attr_accessor :enable_contracts
+	def self.enable_contracts(bool)
+		@@enable_contracts = bool
+	end
+	
+	def self.enable_contracts?
+		@@enable_contracts
+	end
+	
+	@@enable_contracts = true
 
 	@@evaluating_contracts = false
 
@@ -81,7 +88,7 @@ module ContractDecorator
 	end
 
 	def method_missing(symbol, *args, &block)
-		if enable_contracts && !@@evaluating_contracts
+		if @@enable_contracts && !@@evaluating_contracts
 			begin
 				@@evaluating_contracts = true
 				symbol = symbol.to_s
