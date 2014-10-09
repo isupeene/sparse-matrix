@@ -1,7 +1,9 @@
+# Required files to use our classes
 require_relative 'matrix'
 require_relative 'vector'
 require_relative 'contracts/matrix_contract'
 require_relative 'builders/matrix_builder'
+require_relative 'builders/vector_builder'
 require_relative 'builders/sparse_matrix_builder'
 require_relative 'builders/sparse_vector_builder'
 require_relative 'builders/complete_matrix_builder'

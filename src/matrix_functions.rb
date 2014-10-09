@@ -6,6 +6,7 @@ require_relative "builders/complete_matrix_builder"
 require_relative "builders/vector_builder"
 require_relative "builders/complete_vector_builder"
 
+# Functions shared by matrix implementations
 module MatrixFunctions
 
 	# An alias will make a method name refer to a method that has
@@ -36,11 +37,13 @@ module MatrixFunctions
 	public
 	override :component, :[]
 
+	# Return minor of matrix starting at i,j and going for num_rows and num_columns
 	protected
 	def minor_with_index(i, num_rows, j, num_columns)
 		minor_with_range(i...(i + num_rows), j...(j + num_columns))
 	end
 
+	# Return minor of matrix that is contained in the given index range
 	def minor_with_range(i_range, j_range)
 		# TODO: Use smart matrix builder
 		MatrixBuilder.create(:complete, i_range.count, j_range.count) { |b|
@@ -57,6 +60,7 @@ module MatrixFunctions
 		4 => :minor_with_index
 	}
 
+	# Return minor of a matrix
 	public
 	def minor(*args)
 		send(@@minors[args.length], *args)
@@ -66,16 +70,19 @@ module MatrixFunctions
 	# Iteration #
 	#############
 
+	# Return each index in the matrix
 	protected
 	def each_index
 		return to_enum(:each_index) unless block_given?
 		row_size.times{ |i| column_size.times{ |j| yield i, j } }
 	end
 
+	# Select indices based on the condition
 	def select_indices(condition)
 		each_index.select{ |i, j| send(condition, i, j) }
 	end
 
+	# Possible ways to iterate
 	@@iterators = Hash[[
 		:all,
 		:diagonal,
@@ -89,6 +96,7 @@ module MatrixFunctions
 		@@iterators
 	end
 	
+	# Define each method to select values based on selector
 	@@iterators.each do |selector, symbol|
 		define_method(symbol) do |&block|
 			select_indices(selector).each { |i, j|
@@ -97,54 +105,66 @@ module MatrixFunctions
 		end
 	end
 
+	# For iterators, select all
 	def all(i, j)
 		true
 	end
 
+	# For iterators, select elements on diagonal
 	def diagonal(i, j)
 		i == j
 	end
 
+	# For iterators, select elements off diagonal
 	def off_diagonal(i, j)
 		i != j
 	end
 
+	# For iterators, select elements below diagonal and on diagonal
 	def lower(i, j)
 		i >= j
 	end
 
+	# For iterators, select elements below diagonal
 	def strict_lower(i, j)
 		i > j
 	end
 
+	# For iterators, select elements above diagonal and on diagonal
 	def upper(i, j)
 		i <= j
 	end
 
+	# For iterators, select elements above diagonal
 	def strict_upper(i, j)
 		i < j
 	end
 
+	# Select elements with indices based on selector
 	public
 	def each_with_index(selector=:all)
 		return to_enum(:each_with_index, selector) unless block_given?
 		send(@@iterators[selector], &Proc.new)
 	end
 
+	# Select elements based on selector
 	def each(selector=:all)
 		return to_enum(:each, selector) unless block_given?
 		each_with_index(selector){ |x, i, j| yield x }
 	end
 
+	# Return indices if result exists
 	protected
 	def indices_or_nil(result)
 		result.nil? ? nil : result[1..2]
 	end
 
+	# Return index in matrix of value
 	def index_of_value(value, selector)
 		index_of_block(selector){ |x| x == value }
 	end
 
+	# return index in matrix where block equals true
 	def index_of_block(selector)
 		indices_or_nil(each_with_index(selector).find{ |x, i, j| yield x })
 	end
@@ -154,14 +174,16 @@ module MatrixFunctions
 		2 => :index_of_value
 	}
 
+	# Return index where block is true
 	public
 	def index(*args, &block)
 		return to_enum(:index) unless block_given?
-		send(index_finders[args.length], *args, &block)
+		send(@@index_finders[*args.length], *args, &block)
 	end
 
 	override :find_index, :index
 
+	# Make new matrix based on selector and passed block
 	def map(selector=:all)
 		# TODO: Use smart matrix builder
 		# In this case, it might also make sense to choose a builder
@@ -177,6 +199,7 @@ module MatrixFunctions
 	# Properties #
 	##############
 
+	# Return unique pairs of rows. Useful for property checks
 	protected
 	def unique_row_pairs
 		return to_enum(:unique_row_pairs) unless block_given?
@@ -188,11 +211,13 @@ module MatrixFunctions
 		}
 	end
 
+	# Check if matrix is diagonal
 	public
 	def diagonal?
 		lower_triangular? && upper_triangular?
 	end
 
+	# Check if matrix is normal
 	def normal?
 		# NOTE: Now the column vectors are being created
 		# every time.  This can be optimized by creating them
@@ -202,12 +227,14 @@ module MatrixFunctions
 		}
 	end
 
+	# Check if matrix is orthogonal
 	def orthogonal?
 		unique_row_pairs.all? { |row_i, row_j, i, j|
 			row_i * row_j == (i == j ? 1 : 0)
 		}
 	end	
 
+	# Check if matrix is unitary
 	def unitary?
 		unique_row_pairs.all? { |row_i, row_j, i, j|
 			row_i * row_j.conj == (i == j ? 1 : 0)
@@ -218,6 +245,7 @@ module MatrixFunctions
 	# Arithmetic #
 	##############
 
+	# Multiply matrix by matrix
 	protected
 	def matrix_multiply(mat)
 		# NOTE: Column vectors created repeatedly could be slow.
@@ -231,6 +259,7 @@ module MatrixFunctions
 		}.to_mat
 	end
 
+	# Multiply matrix by vector
 	def vector_multiply(vec)
 		# TODO: Use smart vector builder
 		VectorBuilder.create(:complete, vec.size) { |builder|
@@ -238,6 +267,7 @@ module MatrixFunctions
 		}.to_vec
 	end
 
+	# Multiply matrix by scalar (numeric)
 	def scalar_multiply(x)
 		map{ |y| x * y }
 	end
@@ -248,17 +278,20 @@ module MatrixFunctions
 		Numeric => :scalar_multiply
 	})
 
+	# Multiply matrix by argument
 	public
 	def *(x)
 		return apply_through_coercion(x, :*) unless @@multipliers.include?(x)
 		send(@@multipliers.select(x), x)
 	end
 
+	# Divide matrix by matrix
 	protected
 	def matrix_divide(mat)
 		matrix_multiply(mat.inverse)
 	end
 
+	# Divide matrix by scalar (numeric)
 	def scalar_divide(x)
 		map{ |y| y / x }
 	end
@@ -268,12 +301,14 @@ module MatrixFunctions
 		Numeric => :scalar_divide
 	})
 
+	# Divide matrix by argument
 	public
 	def /(x)
 		return apply_through_coercion(x, :/) unless @@dividers.include?(x)
 		send(@@dividers.select(x), x)
 	end
 
+	# Add matrix to self
 	protected
 	def matrix_add(mat)
 		# TODO: use smart matrix builder
@@ -282,6 +317,7 @@ module MatrixFunctions
 		}.to_mat
 	end
 
+	# Add vector to self
 	def vector_add(vec)
 		matrix_add(vec.covector.transpose)
 	end
@@ -291,17 +327,21 @@ module MatrixFunctions
 		VectorContract => :vector_add
 	})
 
+	# Add argument to self
 	public
 	def +(x)
 		return apply_through_coercion(x, :+) unless @@adders.include?(x)
 		send(@@adders.select(x), x)
 	end
 
+	# Subtract argument from self
 	def -(x)
 		return apply_through_coercion(x, :-) unless @@adders.include?(x)
 		self + -x
 	end
 
+	# Take matrix to positive integer exponent through the use of
+	# the binary representation of the integer number.
 	protected
 	def positive_integer_exponent(power)
 		power.to_s(2).length.times.unfold(self){ |m| m * m }
@@ -310,11 +350,13 @@ module MatrixFunctions
 			.reduce(:*)
 	end
 
+	# Matrix to power of 0
 	def zero_integer_exponent(power)
 		# TODO: Use an optimized class for the identity matrix
 		Matrix.identity(row_size)
 	end
 
+	# Matrix to power of negative integer
 	def negative_integer_exponent(power)
 		inverse ** power
 	end
@@ -325,10 +367,12 @@ module MatrixFunctions
 		1..Float::INFINITY => :positive_integer_exponent
 	})
 
+	# Matrix to power of integer exponent
 	def integer_exponent(power)
 		send(@@integer_exponents.select(power), power)
 	end
 
+	# Matrix to power of non-integer exponent
 	def numeric_exponent(power)
 		# TODO: this is copied from Matrix.  Either rewrite it, getting
 		# rid of the temporary variables, or forward it to Matrix somehow.
@@ -341,6 +385,7 @@ module MatrixFunctions
 		Numeric => :numeric_exponent
 	})
 
+	# matrix to power of argument
 	public
 	def **(x)
 		return apply_through_coercion(x, :**) unless @@exponents.include?(x)
@@ -349,6 +394,7 @@ module MatrixFunctions
 
 	override :+@, :clone
 
+	# Return matrix but every element is timesed by -1
 	def -@
 		map(&:-@)
 	end
@@ -357,6 +403,7 @@ module MatrixFunctions
 	# Equality #
 	############
 
+	# Determine matrix equality
 	def ==(other)
 		other.is_a?(MatrixContract) &&
 		other.row_size == row_size &&
@@ -364,6 +411,7 @@ module MatrixFunctions
 		zip(other).all? { |x, y| x == y }
 	end
 
+	# Determine implementation equality
 	def eql?(other)
 		other.class == self.class &&
 		other.row_size == row_size &&
@@ -398,14 +446,17 @@ module MatrixFunctions
 	# Conversion #
 	##############
 
+	# Coerce numeric into scalar
 	def coerce(value)
 		[Scalar.new(value), self]
 	end
 
+	# Convert matrix to array
 	def to_a
 		rows.map(&:to_a)
 	end
 
+	# Convert matrix to string
 	def to_s
 		"#{self.class}[#{rows.map{ |row| row.to_a.to_s }.join(', ')}]"
 	end

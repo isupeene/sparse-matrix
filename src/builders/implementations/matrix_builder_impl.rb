@@ -7,12 +7,15 @@ require_relative '../vector_builder'
 class MatrixBuilderImpl
 	include Enumerable
 	
+	# Return the array of registered builders. For use with decorator.
 	def self.builders
 		@@builders
 	end
 	
 	@@builders = {}
 
+	# Derived classes call this to register themselves so that they can be
+	# made through the MatrixBuilder's create method
 	def self.register(type)
 		@@builders[type] = self
 	end
@@ -23,6 +26,7 @@ class MatrixBuilderImpl
 	# by returning zeros and empty vector builders when the
 	# key is not found.
 	class VectorBuilderHash < Hash
+		# Creates a VectorBuilderHash of vectors of the given type
 		def initialize(builder_type, builder_size)
 			super()
 
@@ -49,10 +53,12 @@ class MatrixBuilderImpl
 		alias super_get []
 		alias super_set []=
 
+		# Accesses element [i,j] of the VectorBuilderHash
 		def [](i, j)
 			include?(i) ? super(i)[j] : 0
 		end
 
+		# Sets element [i,j] of the VectorBuilderHash
 		def []=(i, j, v)
 			super_set(i, VectorBuilder.create(
 				@builder_type, @builder_size
@@ -61,11 +67,13 @@ class MatrixBuilderImpl
 			super_get(i)[j] = v
 		end
 
+		# Returns the vector representing the ith row.
 		def row(i)
 			super_get(i) || @empty_builder
 		end
 	end
 
+	# Creates a new matrix of row_size and column_size for the given builder_type
 	def initialize(row_size, column_size)
 		@row_size = row_size
 		@column_size = column_size
@@ -74,6 +82,7 @@ class MatrixBuilderImpl
 		yield self if block_given?
 	end
 
+	# Creates a copy of the matrix passed.
 	def initialize_copy(other)
 		@row_size = other.row_size
 		@column_size = other.column_size
@@ -87,16 +96,19 @@ class MatrixBuilderImpl
 	attr_reader :row_size
 	attr_reader :column_size
 
+	# Access element [i,j] of the matrix
 	def [](i, j)
 		@rows[i, j]
 	end
 
+	# Set element [i,j] of the matrix
 	def []=(i, j, value)
 		if value != 0 && i >= 0 && i < row_size && j >= 0 && j < column_size
 			@rows[i, j] = value
 		end
 	end
 
+	# Check if other is equal to self
 	def ==(other)
 		other.kind_of?(MatrixBuilderContract) &&
 		row_size == other.row_size &&
@@ -104,11 +116,13 @@ class MatrixBuilderImpl
 		zip(other).all?{ |x, y| x == y }
 	end
 
+	# Iterate over values and indices in the MatrixBuilder
 	def each_with_index
 		return to_enum(:each_with_index) unless block_given?
 		row_size.times{ |i| column_size.times{ |j| yield self[i, j], i, j }}
 	end
 
+	# Iterate over values in the MatrixBuilder
 	def each
 		return to_enum(:each) unless block_given?
 		each_with_index{ |x, i, j| yield x }
