@@ -12,6 +12,8 @@
 # >irb
 # >require "./sparse_matrix_require"
 # >
+#
+# Tests can be run if test unit is installed by requiring the test files located in the test directory
 
 # This file requires all the files necessary to run our code. Done this way for symmetry with
 # an irb version as require_relative will not work in irb.
@@ -176,7 +178,7 @@ sparse_matrix3 = SparseMatrixBuilder.identity(10)
 
 
 # Vectors can also be built through the VectorBuilder class in a way similar to matrices.
-sparse_vector = VectorBuilder(:sparse, row_size){ |builder| 
+sparse_vector = VectorBuilder.create(:sparse, row_size){ |builder| 
 	row_size.times.select{|i| i % 3 == 0}.each{ |i| builder[i] = i}
 }
 
