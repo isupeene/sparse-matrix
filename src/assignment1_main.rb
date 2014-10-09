@@ -17,8 +17,10 @@
 # an irb version as require_relative will not work in irb.
 require_relative "sparse_matrix_require"
 
-# Contracts are enabled by default. To disable them, do the following.
-ContractDecorator.enable_contracts = false
+# Contracts are enabled by default. To disable them, do the following:
+# ContractDecorator.enable_contracts(false)
+# And to check if they are currently enabled:
+ContractDecorator.enable_contracts?
 
 # To create a new matrix use the matrix builder class
 # Can create a sparse matrix or a complete matrix through the first argument to MatrixBuilder.create
