@@ -31,6 +31,7 @@ require_relative '../src/builders/sparse_vector_builder'
 require_relative '../src/builders/complete_vector_builder'
 require_relative '../src/builders/sparse_matrix_builder'
 require_relative '../src/builders/complete_matrix_builder'
+require_relative '../src/builders/dumb_matrix_builder'
 
 module MatrixTestBase
 
@@ -507,4 +508,12 @@ class SparseMatrixTest < Test::Unit::TestCase
 	def matrix_factory
 		SparseMatrixBuilder
 	end
-end 
+end
+
+class DumbMatrixTest < Test::Unit::TestCase
+	include MatrixTestBase
+
+	def matrix_factory
+		DumbMatrixBuilder
+	end
+end
