@@ -1,8 +1,10 @@
 require 'test/unit'
 require_relative 'contract'
+require_relative 'basic_contracts'
+require_relative 'contracts'
 
 module MatrixContract
-	extend Contract
+	extend BasicContracts
 	include Test::Unit::Assertions
 
 	ADD_SUB_TYPE = "Add_Sub"
@@ -44,7 +46,7 @@ module MatrixContract
 	# Common postcondition for addition and subtraction.
 	def self.add_sub_postcondition(method_name, &numBlock)
 		add_postcondition_contract(method_name) do |instance, matrix2, result, *args|
-			matrix2 = instance.convert_vector_to_matrix(ADD_SUB_TYPE, matrix2)
+			matrix2 = instance.convert_vector_to_matrix(matrix2)
 			if instance.is_matrix?(matrix2)
 				if instance.empty?
 					assert_equal(
@@ -73,7 +75,6 @@ module MatrixContract
 	# Common postcondition for multiplication and division.
 	def self.mult_div_postcondition(method_name, &numBlock)
 		add_postcondition_contract(method_name) do |instance, value, result, *args|
-			value = instance.convert_vector_to_matrix(MULT_DIV_TYPE, value)
 			if instance.is_matrix?(value)
 				if instance.empty? || value.empty?
 					instance.empty_matrix_mult_div method_name, value, result
@@ -83,6 +84,8 @@ module MatrixContract
 					end
 					instance.contract_matrix_multiply method_name, value, result
 				end
+			elsif value.is_a?(VectorContract)
+				instance.contract_matrix_multiply(method_name, value.covector, result.covector)
 			elsif value.is_a?(Numeric)
 				assert(
 					result.each_with_index.all? do |val, rowId, colId|
@@ -106,7 +109,7 @@ module MatrixContract
 	# argument is multipliable by a matrix.
 	def self.require_multipliable_arg(method_name)
 		add_precondition_contract(method_name) do |instance, value, *args|
-			matrix2 = instance.convert_vector_to_matrix(MULT_DIV_TYPE, value)
+			matrix2 = instance.convert_vector_to_matrix(value)
 			if instance.is_matrix?(matrix2) 
 				assert_equal(
 					instance.column_size, matrix2.row_size, 
@@ -129,7 +132,7 @@ module MatrixContract
 	def self.require_same_size_matrix(method_name)
 		add_precondition_contract(method_name) do |instance, matrix2, *args|
 			# Allow vectors
-			matrix2 = instance.convert_vector_to_matrix(ADD_SUB_TYPE, matrix2)
+			matrix2 = instance.convert_vector_to_matrix(matrix2)
 			if instance.is_matrix?(matrix2)
 				errorMsg = "Matrix dimensions mismatch. \n" \
 					"Matrix 1: rows = #{instance.row_size} cols = #{instance.column_size} \n" \
@@ -250,14 +253,9 @@ module MatrixContract
 	end
 	
 	# Converts the specified vector to matrix if possible.
-	def convert_vector_to_matrix(type, matrix2)
-		if matrix2.respond_to?(:covector)
-			matrix2 = matrix2.covector
-			if self.row_size > 1 && type == ADD_SUB_TYPE
-				matrix2 = matrix2.transpose
-			elsif self.row_size == 1 && type == MULT_DIV_TYPE
-				matrix2 = matrix2.transpose
-			end
+	def convert_vector_to_matrix(matrix2)
+		if matrix2.is_a?(VectorContract)
+			matrix2 = matrix2.covector.transpose
 		end
 		return matrix2
 	end
@@ -279,6 +277,40 @@ module MatrixContract
 			)
 		end
 	end
+
+	##########
+	# Access #
+	##########
+
+	def op_element_access_precondition(i, j)
+		assert(
+			i.is_a?(Integer) && j.is_a?(Integer),
+			"A matrix can only be indexed by integers.\n" \
+			"Got a #{i.class} and a #{j.class}."
+		)
+	end
+
+	def op_element_access_postcondition(i, j, result)
+		if (i >= row_size ||
+		    i < -row_size ||
+		    j >= column_size ||
+		    j < -column_size)
+			assert_equal(
+				nil,
+				result,
+				"Access out of bounds failed to return nil.\n" \
+				"Returned #{result} instead."
+			)
+		else
+			assert(
+				result.is_a?(Numeric),
+				"The value accessed from the matrix " \
+				"was not numeric.\nIt was a #{result.class}."
+			)
+		end
+	end
+
+	const "[]"
 
 	##############
 	# Properties #
@@ -485,6 +517,12 @@ module MatrixContract
 				value.regular?, 
 				"/ operator requires the second matrix to be invertible."
 			)
+		elsif value.is_a?(Numeric)
+			assert_not_equal(
+				0,
+				value,
+				"Can't divide by zero."
+			)
 		end
 	end
 		
@@ -495,6 +533,21 @@ module MatrixContract
 	return_matrix "/"
 	const "/"
 	const_arguments "/"
+
+	def op_power_precondition(value)
+		if (
+			value.is_a?(Integer) || (
+				value.is_a?(Rational) &&
+				value.numerator % value.denominator == 0
+			)
+		) && value < 0
+			assert(
+				regular?,
+				"Can't take a negative integer power " \
+				"of a singular matrix."
+			)
+		end
+	end
 	
 	def op_power_postcondition(value, result)
 		if empty?
@@ -530,7 +583,7 @@ module MatrixContract
 				end
 			else
 				v, d, v_inv = eigensystem
-				diagonalElements = d.each(:diagonal).collect{|x| x[0]}
+				diagonalElements = d.each(:diagonal).map{|x| x ** value}
 				assert_equal(
 					v * Matrix.diagonal(*diagonalElements) * v_inv,
 					result,
@@ -544,18 +597,49 @@ module MatrixContract
 	require_square "**"
 	return_matrix "**"
 	const "**"
+
+	def op_unary_plus_postcondition(result)
+		assert_equal(
+			self,
+			result,
+			generic_postcondition_failure(:+@, result)
+		)
+
+		assert_not_same(
+			self,
+			result,
+			"+@ should return a new matrix - returned the same one!"
+		)
+	end
+
+	const "+@"
+
+	def op_unary_minus_postcondition(result)
+		assert_equal(
+			[self.row_size, self.column_size],
+			[result.row_size, result.column_size],
+			generic_postcondition_failure(:-@, result)
+		)
+
+		assert(
+			zip(result).all?{ |x, y| x == -y },
+			generic_postcondition_failure(:-@, result)
+		)
+	end
+
+	const "-@"
 	
 	def op_equal_postcondition(value, result)
-		assert_equal(row_size, value.row_size, generic_postcondition_failure("==", result))
-		assert_equal(column_size, value.column_size, generic_postcondition_failure("==", result))
 		assert_equal(
-			zip(value).all? {|x,y| x == y}, result,
-			generic_postcondition_failure("==", result)
+			value.is_a?(MatrixContract) &&
+			self.row_size == value.row_size &&
+			self.column_size == value.column_size &&
+			zip(value).all?{ |x, y| x == y },
+			result,
+			generic_postcondition_failure(:==, result, value)
 		)
 	end
 	
-	require_operand_types "==",
-		MatrixContract
 	const_arguments "=="
 	const "=="
 		

@@ -1,9 +1,10 @@
-require_relative './contract'
-require_relative './matrix_contract'
+require_relative 'contract'
+require_relative 'basic_contracts'
+require_relative 'contracts'
 require 'matrix'
 
 module VectorContract
-	extend Contract
+	extend BasicContracts
 	include Test::Unit::Assertions
 
 	def invariant
@@ -109,6 +110,16 @@ module VectorContract
 		MatrixContract,
 		VectorContract
 
+	def op_divide_precondition(value)
+		if value.is_a?(Numeric)
+			assert_not_equal(
+				0,
+				value,
+				"Cannot divide by zero."
+			)
+		end
+	end
+
 	def op_divide_postcondition(value, result)
 		if value.is_a?(Numeric)
 			assert(
@@ -140,7 +151,7 @@ module VectorContract
 				"vector 1: #{self}, vector 2: #{value}"
 			)
 		elsif value.class.include?(MatrixContract)
-			Matrix.column_vector(self).op_add_precondition(value)
+			Matrix.column_vector(self.to_a).op_add_precondition(value)
 		end
 	end
 
@@ -206,6 +217,37 @@ module VectorContract
 	const "-"
 	require_operand_types "-", VectorContract, MatrixContract
 
+	def op_unary_plus_postcondition(result)
+		assert_equal(
+			self,
+			result,
+			generic_postcondition_failure(:+@, result)
+		)
+
+		assert_not_same(
+			self,
+			result,
+			"@+ should return a new vector - returned the same one!"
+		)
+	end
+
+	const "+@"
+
+	def op_unary_minus_postcondition(result)
+		assert_equal(
+			self.size,
+			result.size,
+			generic_postcondition_failure(:+@, result)
+		)
+
+		assert(
+			zip(result).all?{ |x, y| x == -y },
+			generic_postcondition_failure(:-@, result)
+		)
+	end
+
+	const "-@"
+
 	############
 	# Equality #
 	############
@@ -249,6 +291,13 @@ module VectorContract
 
 	const "magnitude"
 
+	def normalize_precondition
+		assert(
+			magnitude > 0,
+			"can't normalize a zero vector"
+		)
+	end
+
 	def normalize_postcondition(result)
 		assert_equal(
 			1,
@@ -269,6 +318,21 @@ module VectorContract
 	end
 
 	const "size"
+
+	def conjugate_postcondition(result)
+		assert_equal(
+			self.size,
+			result.size,
+			generic_postcondition_failure(:conjugate, result)
+		)
+
+		assert(
+			zip(result).all? { |x, y| y == x.conj },
+			generic_postcondition_failure(:conjugate, result)
+		)
+	end
+
+	const "conjugate"
 
 	##############
 	# Conversion #
