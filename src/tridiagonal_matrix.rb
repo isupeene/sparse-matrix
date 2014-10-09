@@ -2,6 +2,7 @@ require_relative 'contracts/contract_decorator'
 require_relative 'contracts/matrix_contract'
 require_relative 'implementations/tridiagonal_matrix_impl'
 
+# Creates a tridiagonal matrix implementation and wraps it in contracts
 class TridiagonalMatrix
 	include ContractDecorator
 	include MatrixContract
@@ -17,6 +18,7 @@ class TridiagonalMatrix
 	undef_method :kind_of?
 	undef_method :instance_of?
 
+	# Creates a tridiagonal matrix implementation and wraps it in contracts
 	def initialize(*args, &block)
 		super(TridiagonalMatrixImpl.send(:new, *args, &block))
 	end

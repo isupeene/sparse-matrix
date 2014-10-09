@@ -24,12 +24,12 @@ module SparseMatrixFunctions
 
 	# Is the matrix a real matrix?
 	def real?
-		each(:non_zero, &:real?)
+		each(:non_zero).all?{|x| x.real?}
 	end
 
 	# Does the matrix only contain zeros
 	def zero?
-		each(:non_zero).any?
+		each(:non_zero).count == 0
 	end
 
 	##############

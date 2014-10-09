@@ -178,7 +178,7 @@ module MatrixFunctions
 	public
 	def index(*args, &block)
 		return to_enum(:index) unless block_given?
-		send(index_finders[args.length], *args, &block)
+		send(@@index_finders[*args.length], *args, &block)
 	end
 
 	override :find_index, :index

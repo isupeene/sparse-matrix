@@ -1,3 +1,4 @@
+# Required files to use our classes
 require_relative 'matrix'
 require_relative 'vector'
 require_relative 'contracts/matrix_contract'

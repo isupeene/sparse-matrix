@@ -32,4 +32,6 @@ class SparseMatrixBuilderImpl < MatrixBuilderImpl
 	end
 	
 	register :sparse
+	
+	include MatrixBuilderContract
 end

@@ -239,6 +239,8 @@ class SparseVectorImpl
 	def conjugate
 		map(:non_zero){ |x| x.conj }
 	end
+	
+	alias conj conjugate
 
 	############
 	# Equality #

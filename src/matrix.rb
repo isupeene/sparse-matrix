@@ -18,4 +18,6 @@ class Matrix
 		other.column_size == column_size &&
 		zip(other).all?{ |x, y| x == y }
 	end
+	
+	include MatrixContract
 end

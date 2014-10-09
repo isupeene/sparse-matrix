@@ -130,5 +130,7 @@ class SparseMatrixImpl < Matrix
 	##################
 
 	# TODO: Investigate if these can be done more efficiently.
+	
+	include MatrixContract
 
 end

@@ -17,4 +17,6 @@ class CompleteMatrixBuilderImpl < MatrixBuilderImpl
 	end
 
 	register :complete
+	
+	include MatrixBuilderContract
 end
