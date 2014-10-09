@@ -2,6 +2,7 @@ require 'test/unit'
 require_relative '../src/contracts/matrix_builder_contract.rb'
 require_relative '../src/builders/complete_matrix_builder'
 require_relative '../src/builders/sparse_matrix_builder'
+require_relative '../src/builders/dumb_matrix_builder'
 
 module MatrixBuilderTestBase
 
@@ -66,5 +67,13 @@ class SparseMatrixBuilderTest < Test::Unit::TestCase
 
 	def builder_factory
 		SparseMatrixBuilder
+	end
+end
+
+class DumbMatrixBuilderTest < Test::Unit::TestCase
+	include MatrixBuilderTestBase
+
+	def builder_factory
+		DumbMatrixBuilder
 	end
 end
