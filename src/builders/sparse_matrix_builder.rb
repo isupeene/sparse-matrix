@@ -1,10 +1,21 @@
 require_relative 'matrix_builder'
 require_relative 'sparse_vector_builder'
-require_relative '../tridiagonal_matrix'
-require_relative '../sparse_matrix'
+require_relative '../contracts/contract_decorator'
 require_relative '../contracts/matrix_builder_contract'
+require_relative 'implementations/sparse_matrix_builder_impl'
 
-class SparseMatrixBuilder < MatrixBuilder
+class SparseMatrixBuilder 
+	include ContractDecorator
+	include MatrixBuilderContract
+
+	def initialize(*args, &block)
+		super(SparseMatrixBuilderImpl.send(:new, *args, &block))
+	end
+	
+	def builder_type
+		:sparse
+	end
+
 	def self.[](*rows)
 		rows = rows.map(&:to_ary)
 
@@ -66,28 +77,4 @@ class SparseMatrixBuilder < MatrixBuilder
 	def self.unit(n)
 		I(n)
 	end
-
-	def builder_type
-		:sparse
-	end
-
-	def to_mat
-		tridiagonal? ?
-			TridiagonalMatrix.send(:new, self) :
-			SparseMatrix.send(:new, self)
-	end
-
-	# Required by SparseMatrix.new
-	def row(i)
-		rows.row(i)
-	end
-
-	def tridiagonal?
-		row_size == column_size &&
-		each_with_index.all?{ |x, i, j| x == 0 || (i - j).abs <= 1 }
-	end
-
-	register :sparse
-
-	include MatrixBuilderContract
 end

@@ -1,6 +1,6 @@
 require_relative 'contract'
 require_relative 'basic_contracts'
-require_relative 'matrix_contract'
+#require_relative 'matrix_contract'
 require 'test/unit'
 
 module MatrixBuilderContract
@@ -73,7 +73,7 @@ module MatrixBuilderContract
 		)
 
 		assert_equal(
-			value,
+			value == 0 ? nil : value,
 			result,
 			generic_postcondition_failure(:[]=, result, value)
 		)
