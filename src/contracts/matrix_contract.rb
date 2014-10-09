@@ -583,7 +583,7 @@ module MatrixContract
 				end
 			else
 				v, d, v_inv = eigensystem
-				diagonalElements = d.each(:diagonal).map{|x| x ** other}
+				diagonalElements = d.each(:diagonal).map{|x| x ** value}
 				assert_equal(
 					v * Matrix.diagonal(*diagonalElements) * v_inv,
 					result,

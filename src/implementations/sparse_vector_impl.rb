@@ -90,28 +90,30 @@ class SparseVectorImpl
 		send(@@iterators[selector], &Proc.new)
 	end
 
-	def each2(v, selector=:all)
-		each2_with_index(v, selector){ |x, y, i| yield x, y }
+	def each2(v)
+		each2_with_index(v){ |x, y, i| yield x, y }
 	end
 
-	def each2_with_index(v, selector=:all)
-		each_with_index(selector){ |x, i| yield x, v[i], i }
+	def each2_with_index(v)
+		each_with_index(){ |x, i| yield x, v[i], i }
 	end
 
 	def map(selector=:all)
-		map2([], selector){ |x, _| yield x }
+		VectorBuilder.create(:sparse, size) { |b|
+			each_with_index(selector){ |x, i| b[i] = yield x }
+		}.to_vec
 	end
 
 	alias collect map
 
-	def map2(v, selector=:all)
+	def map2(v)
 		VectorBuilder.create(:sparse, size) { |b|
-			each2_with_index(v, selector){ |x, y, i| b[i] = yield x, y }
+			each2_with_index(v){ |x, y, i| b[i] = yield x, y }
 		}.to_vec
 	end
 
-	def collect2(v, selector=:all)
-		map2(v, selector, &Proc.new).to_a
+	def collect2(v)
+		map2(v, &Proc.new).to_a
 	end
 
 	##############
@@ -164,7 +166,7 @@ class SparseVectorImpl
 	end
 
 	def /(x)
-		return apply_through_coercioun(x, :/) unless x.is_a?(Numeric)
+		return apply_through_coercion(x, :/) unless x.is_a?(Numeric)
 		map{ |y| y / x }
 	end
 

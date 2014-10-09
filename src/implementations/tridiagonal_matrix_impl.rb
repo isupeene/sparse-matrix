@@ -17,13 +17,13 @@ class TridiagonalMatrixImpl < Matrix
 		@column_size = builder.column_size
 
 		@upper = VectorBuilder.create(:sparse, builder.row_size - 1) { |b|
-			builder.each_with_index.select{ |x, i, j| i < j }.each{ |x, i|
+			builder.each_with_index.select{ |x, i, j| i == j - 1 }.each{ |x, i|
 				b[i] = x
 			}
 		}.to_vec
 
 		@lower = VectorBuilder.create(:sparse, builder.row_size - 1) { |b|
-			builder.each_with_index.select{|x, i, j| i > j}.each{|x, _, j|
+			builder.each_with_index.select{|x, i, j| i == j + 1}.each{|x, _, j|
 				b[j] = x
 			}
 		}.to_vec

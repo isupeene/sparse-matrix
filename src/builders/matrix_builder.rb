@@ -19,6 +19,10 @@ class MatrixBuilder
 
 	private_class_method :new
 
+	# Optimizes the storage of sparse vectors by creating
+	# vectors only when necessary, and abstracts the sparsity
+	# by returning zeros and empty vector builders when the
+	# key is not found.
 	class VectorBuilderHash < Hash
 		def initialize(builder_type, builder_size)
 			super()
@@ -30,6 +34,19 @@ class MatrixBuilder
 			)
 		end
 
+		def initialize_copy(other)
+			@builder_size = other.builder_size
+			@empty_builder = other.empty_builder
+			@builder_type = other.builder_type
+
+			other.each{ |k, v| super_set(k, v) }
+		end
+
+		protected
+		attr_reader :builder_size
+		attr_reader :empty_builder
+
+		public
 		alias super_get []
 		alias super_set []=
 
@@ -76,7 +93,9 @@ class MatrixBuilder
 	end
 
 	def []=(i, j, value)
-		@rows[i, j] = value
+		if value != 0 && i >= 0 && i < row_size && j >= 0 && j < column_size
+			@rows[i, j] = value
+		end
 	end
 
 	def ==(other)

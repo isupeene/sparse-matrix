@@ -76,7 +76,7 @@ module MatrixFunctions
 		each_index.select{ |i, j| send(condition, i, j) }
 	end
 
-	@@iterators = Hash[*[
+	@@iterators = Hash[[
 		:all,
 		:diagonal,
 		:off_diagonal,
@@ -84,7 +84,7 @@ module MatrixFunctions
 		:strict_lower,
 		:upper,
 		:strict_upper
-	].map{ |s| [s, ("iterate_" + s.to_s).to_sym] }.flat_map{ |x| x }]
+	].map{ |s| [s, ("iterate_" + s.to_s).to_sym] }]
 	def iterators
 		@@iterators
 	end
@@ -137,7 +137,7 @@ module MatrixFunctions
 	end
 
 	protected
-	def indices_or_null(result)
+	def indices_or_nil(result)
 		result.nil? ? nil : result[1..2]
 	end
 
